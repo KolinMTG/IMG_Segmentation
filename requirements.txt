@@ -1,0 +1,16 @@
+tensorflow
+numpy
+matplotlib
+seaborn
+scikit-image
+opencv-python
+pillow
+albumentations
+tqdm
+jupyter
+notebook
+ipython
+pandas
+scikit-learn
+tqdm
+scikit-image

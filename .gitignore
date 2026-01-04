@@ -1,0 +1,16 @@
+# Environment variables
+.env
+
+# Data and logs
+data/
+.logs/
+
+# Model checkpoints
+checkpoints/
+# Saved models
+models/
+# Trash or temporary files
+.trash/
+
+# Editor-specific settings
+.vscode/
