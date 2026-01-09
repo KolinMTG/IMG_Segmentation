@@ -7,7 +7,7 @@ from tqdm import tqdm
 from PIL import Image
 import os
 
-from src.cste import *
+from src.cste import ClassInfo
 from src.logger import get_logger
 
 
@@ -35,8 +35,8 @@ def show_img_labels(img_path: str, label_path: str):
     log.info(f"Label array shape: {label_array.shape}")
 
     # Get colors and class names from constants
-    colors = DataGeneralInfo.CLASS_COLOR
-    class_names = DataGeneralInfo.CLASS_NAME 
+    colors = ClassInfo.CLASS_COLOR
+    class_names = ClassInfo.CLASS_NAME 
 
     # Build colored mask from segmentation labels
     colored_mask = np.zeros((label_array.shape[0], label_array.shape[1], 3), dtype=np.uint8)
@@ -89,8 +89,8 @@ def class_proportion(labels_path_folder: str) -> None:
     total_pixels = 0
 
     # Get class names and colors from constants
-    class_names = DataGeneralInfo.CLASS_NAME
-    colors = DataGeneralInfo.CLASS_COLOR
+    class_names = ClassInfo.CLASS_NAME
+    colors = ClassInfo.CLASS_COLOR
     
     # List all label image files in the folder
     label_files = [f for f in os.listdir(labels_path_folder) 
@@ -171,8 +171,8 @@ def class_proportion_by_image(labels_path_folder: str) -> None:
     total_images = 0
     
     # Get class names and colors from constants
-    class_names = DataGeneralInfo.CLASS_NAME
-    colors = DataGeneralInfo.CLASS_COLOR
+    class_names = ClassInfo.CLASS_NAME
+    colors = ClassInfo.CLASS_COLOR
     
     # List all label image files in the folder
     label_files = [f for f in os.listdir(labels_path_folder) 
@@ -254,4 +254,6 @@ if __name__ == "__main__":
     # Analyze class proportions across the entire training dataset
     log.info("\n")
     # class_proportion(DataPath.LABEL_TRAIN)
-    class_proportion_by_image(DataPath.LABEL_TRAIN)
+    # class_proportion_by_image(DataPath.LABEL_TRAIN)
+
+    show_img_labels(r"data/images/test/M-33-20-D-c-4-2_0.png", r"data/results/predictions/M-33-20-D-c-4-2_0_seg.png")
