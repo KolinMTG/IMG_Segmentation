@@ -7,6 +7,11 @@ from typing import Dict, List
 # ============================================================================
 # PATH CONFIGURATION
 # ============================================================================
+class GeneralConfig:
+    """General project configuration."""
+    RANDOM_SEED: int = 42
+    NB_JOBS: int = 4  # Number of parallel jobs for processing
+
 
 class GeneralPath:
     """General project paths."""
@@ -21,12 +26,14 @@ class DataPath:
     LABEL_TRAIN: str = r"data/labels/train/"
     LABEL_VAL: str = r"data/labels/val/"
     LABEL_TEST: str = r"data/labels/test/"
-
+    REPORT_PATH:str = r"data/reports/"
+    RESULT_PATH:str = r"data/results/"
 
 class ResultPath:
     """Result output paths."""
     PREDICTION_PATH: str = r"data/results/predictions/"
     TEST_PATH: str = r"data/results/tests/"
+    EVALUATION_CSV_PATH:str = r"data/results/predictions_metrics.csv"
 
 class TestPath:
     """Paths for test images and labels."""
@@ -86,6 +93,9 @@ class ClassInfo:
 
 class ProcessingConfig:
     """Default parameters for image processing operations."""
+
+    #Background class (most common class in images)
+    BACKGROUND_CLASS: int = 0  # Field
     
     # Gaussian smoothing
     GAUSSIAN_SIGMA_LIGHT: float = 1.0
@@ -125,3 +135,9 @@ class ProcessingConfig:
     # Variance scaling factors
     VARIANCE_SCALE_FIELD: float = 100.0
     VARIANCE_SCALE_WATER: float = 150.0
+
+    # Post-processing parameters
+    OPENING_RADIUS: int = 2
+    CLOSING_RADIUS: int = 3
+    MIN_AREA: int = 50  # Minimum area to keep a detected region
+    CONFIDENCE_THRESHOLD: float = 0.5  # Minimum confidence to accept detection

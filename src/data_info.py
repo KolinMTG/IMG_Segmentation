@@ -26,6 +26,7 @@ def show_img_labels(img_path: str, label_path: str):
 
     # Load mask as single-channel
     label = Image.open(label_path).convert("L")
+    
 
     # Convert to numpy arrays
     img_array = np.array(img)
@@ -35,8 +36,8 @@ def show_img_labels(img_path: str, label_path: str):
     log.info(f"Label array shape: {label_array.shape}")
 
     # Get colors and class names from constants
-    colors = ClassInfo.CLASS_COLOR
-    class_names = ClassInfo.CLASS_NAME 
+    colors = ClassInfo.CLASS_COLORS
+    class_names = ClassInfo.CLASS_NAMES 
 
     # Build colored mask from segmentation labels
     colored_mask = np.zeros((label_array.shape[0], label_array.shape[1], 3), dtype=np.uint8)
@@ -256,4 +257,5 @@ if __name__ == "__main__":
     # class_proportion(DataPath.LABEL_TRAIN)
     # class_proportion_by_image(DataPath.LABEL_TRAIN)
 
-    show_img_labels(r"data/images/test/M-33-20-D-c-4-2_0.png", r"data/results/predictions/M-33-20-D-c-4-2_0_seg.png")
+    show_img_labels(r"data/images/test/M-33-20-D-c-4-2_105.jpg",
+                    r"data/results/predictions/M-33-20-D-c-4-2_105_pred.png")

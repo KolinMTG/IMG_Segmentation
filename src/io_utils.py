@@ -6,15 +6,17 @@ import numpy as np
 from PIL import Image
 from typing import Optional
 import os
+from typing import List, Dict
 
 
-def load_image(img_path: str, normalize: bool = True) -> np.ndarray:
+def load_image(img_path: str, normalize: bool = True, one_channel: bool = False) -> np.ndarray:
     """
     Load RGB image from file path.
     
     Args:
         img_path: Path to image file
         normalize: If True, normalize to [0, 1], else keep [0, 255]
+        one_channel: If True, load as grayscale mono channel
         
     Returns:
         RGB image as numpy array
@@ -30,15 +32,18 @@ def load_image(img_path: str, normalize: bool = True) -> np.ndarray:
     
     try:
         img = Image.open(img_path).convert("RGB")
+        if one_channel: # convert to grayscale if requested
+            img = img.convert("L")
     except Exception as e:
         raise ValueError(f"Failed to load image {img_path}: {e}")
     
     img_array = np.array(img)
-    
+
     if normalize:
-        return img_array.astype(np.float32) / 255.0
+        img_array = img_array.astype(np.float32) / 255.0
     else:
-        return img_array
+        img_array = img_array.astype(np.uint8)
+    return img_array
 
 
 def save_mask(
@@ -47,42 +52,49 @@ def save_mask(
     as_uint8: bool = True
 ) -> None:
     """
-    Save mask to disk as PNG.
-    
+    Save a single-channel integer mask to disk as PNG.
+
     Args:
-        mask: 2D array with values in [0, 1] or [0, 255]
-        save_path: Output file path
-        as_uint8: If True, convert [0, 1] to [0, 255] uint8
+        mask: 2D array with integer values [0, NUM_CLASSES-1], one pixel per class.
+        save_path: Output file path.
+        as_uint8: Whether to convert the mask to uint8 before saving.
+                  Recommended if NUM_CLASSES <= 255.
+
+    Notes:
+        ! The mask values are assumed to be integers representing class IDs.
+        ! No normalization or scaling is applied; pixels retain their class IDs.
     """
+    # Ensure the output directory exists
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    
+
+    # Convert to uint8 if requested
     if as_uint8 and mask.dtype != np.uint8:
-        mask_to_save = (mask * 255).astype(np.uint8)
+        mask_to_save = mask.astype(np.uint8)
     else:
         mask_to_save = mask
-    
+
+    # Save mask using PIL
     img = Image.fromarray(mask_to_save)
     img.save(save_path)
 
 
-def save_colored_mask(
-    mask: np.ndarray,
-    save_path: str,
-    color_map: dict
-) -> None:
+
+def list_dir_endwith(
+    dir_path: str,
+    suffixes: Optional[tuple] = ('.png', '.jpg', '.jpeg')
+) -> List[str]:
     """
-    Save class mask as colored RGB image.
-    
+    List files in directory with specific suffixes.
     Args:
-        mask: 2D integer array with class IDs
-        save_path: Output file path
-        color_map: Dictionary mapping class_id -> [R, G, B]
+        dir_path: Directory path
+        suffixes: Tuple of file extensions to filter by
+        
+    Returns:
+        List of file paths matching the suffixes
     """
-    h, w = mask.shape
-    colored = np.zeros((h, w, 3), dtype=np.uint8)
+    if not os.path.isdir(dir_path):
+        raise NotADirectoryError(f"Not a directory: {dir_path}")
     
-    for class_id, color in color_map.items():
-        colored[mask == class_id] = color
-    
-    img = Image.fromarray(colored)
-    img.save(save_path)
+    list_files_names = os.listdir(dir_path)
+    list_selected_files = [f for f in list_files_names if "."+f.split('.')[-1].lower() in suffixes]
+    return [os.path.join(dir_path, f) for f in list_selected_files]

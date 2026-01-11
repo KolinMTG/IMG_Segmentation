@@ -1,5 +1,10 @@
 
 """Renvoie un logger configuré pour l'application."""
+
+# Auth : Colin Manyri 
+# Date : 27-06-2024
+
+
 #! /!\ Pour utiliser les logs, faire dans votre script :
 # from log_config import get_logger
 # logger = get_logger("nom_du_fichier_log.log", log_level=logging.INFO, console=True)

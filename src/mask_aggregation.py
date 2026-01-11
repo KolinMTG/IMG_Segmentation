@@ -4,15 +4,21 @@ Probabilistic mask aggregation with spatial coherence and noise suppression.
 This module implements neighborhood-based voting for multi-class segmentation,
 reducing pixel-level noise through spatial probability aggregation and
 morphological post-processing.
+
+Pipeline:
+    1. Spatial probability aggregation (Gaussian/uniform smoothing)
+    2. Multi-class decision (argmax with optional confidence threshold)
+    3. Morphological noise suppression (per-class cleaning)
 """
 
 import numpy as np
 import cv2
 from scipy import ndimage
-from scipy.ndimage import uniform_filter, gaussian_filter
+from scipy.ndimage import gaussian_filter
 from skimage.morphology import remove_small_objects, opening, closing, disk
 from typing import Dict, Optional, Tuple, Union
 
+from cste import ProcessingConfig
 
 
 # ============================================================================
@@ -21,14 +27,14 @@ from typing import Dict, Optional, Tuple, Union
 
 def create_gaussian_kernel(size: int, sigma: Optional[float] = None) -> np.ndarray:
     """
-    Create a normalized 2D Gaussian kernel.
+    Create a normalized 2D Gaussian kernel for spatial filtering.
     
     Args:
-        size: Kernel size (must be odd)
-        sigma: Standard deviation (default: size/6 for ~3σ coverage)
+        size: Kernel dimension (must be odd, e.g., 3, 5, 7)
+        sigma: Standard deviation. If None, uses size/6 for ~3σ coverage
         
     Returns:
-        Normalized Gaussian kernel of shape (size, size)
+        Normalized Gaussian kernel of shape (size, size), sum equals 1.0
         
     Example:
         >>> kernel = create_gaussian_kernel(5, sigma=1.0)
@@ -40,17 +46,18 @@ def create_gaussian_kernel(size: int, sigma: Optional[float] = None) -> np.ndarr
     if size % 2 == 0:
         raise ValueError(f"Kernel size must be odd, got {size}")
     
+    # ! Default sigma ensures 3-sigma rule covers 99.7% of distribution
     if sigma is None:
-        sigma = size / 6.0  # 3-sigma rule covers ~99.7% of distribution
+        sigma = size / 6.0
     
-    # Create coordinate grids
+    # Create coordinate grids centered at kernel center
     ax = np.arange(-size // 2 + 1, size // 2 + 1)
     xx, yy = np.meshgrid(ax, ax)
     
-    # Compute Gaussian
+    # Compute 2D Gaussian: exp(-(x² + y²) / (2σ²))
     kernel = np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
     
-    # Normalize to sum to 1
+    # ! Normalize to sum to 1 (preserves probability mass)
     kernel = kernel / kernel.sum()
     
     return kernel
@@ -58,13 +65,13 @@ def create_gaussian_kernel(size: int, sigma: Optional[float] = None) -> np.ndarr
 
 def create_uniform_kernel(size: int) -> np.ndarray:
     """
-    Create a normalized uniform kernel.
+    Create a normalized uniform (box) kernel for spatial averaging.
     
     Args:
-        size: Kernel size (must be odd)
+        size: Kernel dimension (must be odd)
         
     Returns:
-        Normalized uniform kernel of shape (size, size)
+        Normalized uniform kernel of shape (size, size), all values equal
     """
     if size % 2 == 0:
         raise ValueError(f"Kernel size must be odd, got {size}")
@@ -88,50 +95,43 @@ def aggregate_spatial_probabilities(
     """
     Apply spatial probability aggregation using neighborhood voting.
     
-    For each class, convolves the probability mask with a Gaussian kernel
-    to compute contextual probabilities based on local neighborhoods.
-    
-    Intuition: If surrounding pixels have high probability for class C,
-    the central pixel likely also belongs to class C.
+    For each class, convolves the probability mask with a kernel to compute
+    contextual probabilities. High neighborhood probability → high pixel probability.
     
     Args:
-        class_masks: Dictionary {class_id: probability_map}
-                    Each map is (H, W) with values in [0, 1]
-        kernel_size: Size of convolution kernel (must be odd)
-        kernel_type: 'gaussian' or 'uniform'
-        sigma: Standard deviation for Gaussian (default: kernel_size/6)
+        class_masks: Dictionary {class_id: probability_map (H, W) in [0, 1]}
+        kernel_size: Convolution kernel size (must be odd)
+        kernel_type: 'gaussian' for weighted voting, 'uniform' for simple averaging
+        sigma: Gaussian standard deviation (default: kernel_size/6)
         
     Returns:
-        Dictionary {class_id: smoothed_probability_map}
-        Each smoothed map represents contextual probability
+        Dictionary {class_id: smoothed_probability_map (H, W) in [0, 1]}
         
     Example:
-        >>> masks = {0: field_mask, 1: building_mask}
+        >>> masks = {0: field_prob, 1: building_prob, 2: water_prob}
         >>> smoothed = aggregate_spatial_probabilities(masks, kernel_size=5)
-        >>> # smoothed[1] = probability that pixel is building given neighborhood
     """
     if not class_masks:
-        raise ValueError("class_masks dictionary is empty")
+        raise ValueError("class_masks dictionary cannot be empty")
     
-    # Create kernel
+    # Create convolution kernel
     if kernel_type == 'gaussian':
         kernel = create_gaussian_kernel(kernel_size, sigma)
     elif kernel_type == 'uniform':
         kernel = create_uniform_kernel(kernel_size)
     else:
-        raise ValueError(f"Unknown kernel_type: {kernel_type}")
+        raise ValueError(f"Unknown kernel_type: {kernel_type}. Use 'gaussian' or 'uniform'")
     
-    # Smooth each class probability map
     smoothed_masks = {}
     
     for class_id, mask in class_masks.items():
         if mask.ndim != 2:
-            raise ValueError(f"Mask for class {class_id} must be 2D")
+            raise ValueError(f"Mask for class {class_id} must be 2D, got shape {mask.shape}")
         
-        # Convolve with kernel (neighborhood voting)
+        # ! Convolve with kernel for neighborhood-weighted probability
         smoothed = ndimage.convolve(mask, kernel, mode='reflect')
         
-        # Ensure values stay in [0, 1] (numerical precision)
+        # ! Ensure numerical stability: clip to valid probability range
         smoothed = np.clip(smoothed, 0.0, 1.0)
         
         smoothed_masks[class_id] = smoothed
@@ -147,12 +147,13 @@ def aggregate_spatial_probabilities_fast(
     """
     Fast spatial aggregation using separable Gaussian filtering.
     
-    More efficient than full 2D convolution for large kernels.
+    More efficient than 2D convolution for large kernels. Uses scipy's optimized
+    Gaussian filter which separates into 1D horizontal and vertical passes.
     
     Args:
-        class_masks: Dictionary {class_id: probability_map}
-        kernel_size: Size of Gaussian kernel (approximate)
-        sigma: Standard deviation (default: kernel_size/6)
+        class_masks: Dictionary {class_id: probability_map (H, W)}
+        kernel_size: Approximate kernel size (used to compute sigma if not provided)
+        sigma: Gaussian standard deviation (default: kernel_size/6)
         
     Returns:
         Dictionary {class_id: smoothed_probability_map}
@@ -163,7 +164,7 @@ def aggregate_spatial_probabilities_fast(
     smoothed_masks = {}
     
     for class_id, mask in class_masks.items():
-        # Gaussian filter is separable: much faster
+        # ! Separable Gaussian filter: O(N·M·σ) vs O(N·M·k²) for 2D convolution
         smoothed = gaussian_filter(mask, sigma=sigma, mode='reflect')
         smoothed = np.clip(smoothed, 0.0, 1.0)
         smoothed_masks[class_id] = smoothed
@@ -178,47 +179,49 @@ def aggregate_spatial_probabilities_fast(
 def assign_max_probability_class(
     smoothed_masks: Dict[int, np.ndarray],
     confidence_threshold: Optional[float] = None,
-    background_class: int = -1
+    background_class: int = 0
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Assign each pixel to the class with maximum contextual probability.
     
+    Implements winner-takes-all classification with optional confidence thresholding.
+    Low-confidence pixels are assigned to background class.
+    
     Args:
         smoothed_masks: Dictionary {class_id: smoothed_probability_map}
-        confidence_threshold: Minimum probability to assign class
-                             If max prob < threshold, assign background_class
-        background_class: Class ID for low-confidence pixels (default: -1)
+        confidence_threshold: Minimum probability required for class assignment.
+                            If max_prob < threshold, assigns background_class
+        background_class: Class ID for low-confidence or filtered pixels (default: 0)
         
     Returns:
         Tuple of:
-        - class_map: (H, W) array of class IDs
-        - confidence_map: (H, W) array of maximum probabilities
+        - class_map: (H, W) integer array with class IDs (0-5)
+        - confidence_map: (H, W) float array with maximum probabilities
         
     Example:
         >>> smoothed = {0: field_prob, 1: building_prob, 2: water_prob}
-        >>> class_map, confidence = assign_max_probability_class(smoothed)
-        >>> # class_map[i,j] = argmax_c(smoothed[c][i,j])
+        >>> class_map, confidence = assign_max_probability_class(smoothed, confidence_threshold=0.5)
     """
     if not smoothed_masks:
-        raise ValueError("smoothed_masks dictionary is empty")
+        raise ValueError("smoothed_masks dictionary cannot be empty")
     
-    # Stack all probability maps: (H, W, num_classes)
+    # ! Stack probability maps: shape (H, W, num_classes)
     class_ids = sorted(smoothed_masks.keys())
     prob_stack = np.stack([smoothed_masks[cid] for cid in class_ids], axis=-1)
     
-    # Find class with maximum probability
+    # ! Find class with maximum probability at each pixel
     max_prob_indices = np.argmax(prob_stack, axis=-1)  # (H, W)
     max_probabilities = np.max(prob_stack, axis=-1)    # (H, W)
     
-    # Map indices back to class IDs
+    # ! Map array indices back to actual class IDs
     class_map = np.zeros_like(max_prob_indices, dtype=np.int32)
     for idx, class_id in enumerate(class_ids):
         class_map[max_prob_indices == idx] = class_id
     
-    # Apply confidence threshold if specified
+    # ! Apply confidence threshold: low-confidence pixels → background
     if confidence_threshold is not None:
-        low_confidence = max_probabilities < confidence_threshold
-        class_map[low_confidence] = background_class
+        low_confidence_mask = max_probabilities < confidence_threshold
+        class_map[low_confidence_mask] = background_class
     
     return class_map, max_probabilities
 
@@ -231,50 +234,54 @@ def suppress_noise_per_class(
     class_map: np.ndarray,
     opening_radius: int = 2,
     closing_radius: int = 3,
-    min_area: int = 50
+    min_area: int = 50,
+    background_class: int = 0
 ) -> np.ndarray:
     """
-    Apply morphological filtering per class to suppress noise.
+    Apply morphological filtering per class to remove noise and small artifacts.
     
-    For each class:
+    For each class (excluding background):
     1. Opening: removes isolated noisy pixels (salt noise)
     2. Closing: fills small holes inside objects (pepper noise)
     3. Remove small connected components
     
+    ! Filtered pixels are assigned to background_class, NOT negative values.
+    
     Args:
-        class_map: (H, W) array of class IDs
-        opening_radius: Radius of disk structuring element for opening
-        closing_radius: Radius of disk structuring element for closing
+        class_map: (H, W) integer array with class IDs
+        opening_radius: Disk radius for morphological opening
+        closing_radius: Disk radius for morphological closing
         min_area: Minimum area (pixels) for connected components
+        background_class: Class ID to assign to filtered pixels (default: 0)
         
     Returns:
-        Cleaned class map with same shape as input
+        Cleaned class map (H, W) with same integer class IDs
         
     Example:
         >>> noisy_map = assign_max_probability_class(masks)[0]
-        >>> clean_map = suppress_noise_per_class(noisy_map, min_area=100)
+        >>> clean_map = suppress_noise_per_class(noisy_map, min_area=100, background_class=0)
     """
     cleaned_map = class_map.copy()
     unique_classes = np.unique(class_map)
     
-    # Filter out background class if present
-    unique_classes = unique_classes[unique_classes >= 0]
+    # ! Filter out background class and any negative values
+    unique_classes = unique_classes[(unique_classes >= 0) & (unique_classes != background_class)]
     
     for class_id in unique_classes:
         # Create binary mask for this class
         binary_mask = (class_map == class_id).astype(np.uint8)
         
-        # Opening: remove small objects (isolated pixels)
+        # ! Opening: remove small isolated objects
         if opening_radius > 0:
             selem = disk(opening_radius)
             binary_mask = opening(binary_mask, selem)
         
-        # Closing: fill small holes
+        # ! Closing: fill small holes within objects
         if closing_radius > 0:
             selem = disk(closing_radius)
             binary_mask = closing(binary_mask, selem)
         
-        # Remove small connected components
+        # ! Remove small connected components below area threshold
         if min_area > 0:
             binary_mask = remove_small_objects(
                 binary_mask.astype(bool),
@@ -282,10 +289,10 @@ def suppress_noise_per_class(
                 connectivity=2
             ).astype(np.uint8)
         
-        # Update cleaned map
-        # First, remove this class from cleaned map
-        cleaned_map[class_map == class_id] = -1
-        # Then, add back only the filtered regions
+        # ! Update cleaned map: filtered pixels → background_class
+        # First, clear all pixels of this class
+        cleaned_map[class_map == class_id] = background_class
+        # Then, restore only pixels that survived filtering
         cleaned_map[binary_mask > 0] = class_id
     
     return cleaned_map
@@ -297,19 +304,20 @@ def suppress_noise_global(
     iterations: int = 1
 ) -> np.ndarray:
     """
-    Apply global morphological filtering to entire segmentation.
+    Apply global morphological filtering to entire segmentation map.
     
-    Simpler alternative to per-class filtering.
+    Simpler alternative to per-class filtering. Uses elliptical structuring element
+    for isotropic noise removal.
     
     Args:
-        class_map: (H, W) array of class IDs
-        kernel_size: Size of morphological kernel
+        class_map: (H, W) integer array with class IDs
+        kernel_size: Size of morphological structuring element
         iterations: Number of opening/closing iterations
         
     Returns:
-        Cleaned class map
+        Cleaned class map (H, W)
     """
-    # Convert to uint8 for OpenCV
+    # ! Convert to uint8 for OpenCV compatibility
     class_map_uint8 = class_map.astype(np.uint8)
     
     kernel = cv2.getStructuringElement(
@@ -317,7 +325,7 @@ def suppress_noise_global(
         (kernel_size, kernel_size)
     )
     
-    # Opening then closing
+    # ! Opening removes small bright regions (isolated class pixels)
     cleaned = cv2.morphologyEx(
         class_map_uint8,
         cv2.MORPH_OPEN,
@@ -325,6 +333,7 @@ def suppress_noise_global(
         iterations=iterations
     )
     
+    # ! Closing fills small dark regions (holes in class regions)
     cleaned = cv2.morphologyEx(
         cleaned,
         cv2.MORPH_CLOSE,
@@ -344,17 +353,18 @@ def create_colored_segmentation(
     color_map: Dict[int, Union[list, tuple]]
 ) -> np.ndarray:
     """
-    Create RGB visualization of segmentation map.
+    Create RGB visualization of segmentation map with class-specific colors.
     
     Args:
-        class_map: (H, W) array of class IDs
+        class_map: (H, W) integer array with class IDs
         color_map: Dictionary {class_id: [R, G, B]} with values in [0, 255]
         
     Returns:
         RGB image (H, W, 3) with dtype uint8
         
     Example:
-        >>> colors = {0: [0,0,0], 1: [255,0,0], 2: [0,255,0]}
+        >>> from cste import ClassInfo
+        >>> colors = ClassInfo.CLASS_COLORS
         >>> rgb_img = create_colored_segmentation(class_map, colors)
     """
     h, w = class_map.shape
@@ -368,7 +378,7 @@ def create_colored_segmentation(
 
 
 # ============================================================================
-# MAIN PIPELINE
+# MAIN AGGREGATION PIPELINE
 # ============================================================================
 
 def aggregate_masks(
@@ -377,51 +387,60 @@ def aggregate_masks(
     kernel_type: str = 'gaussian',
     sigma: Optional[float] = None,
     confidence_threshold: Optional[float] = None,
-    background_class: int = -1,
-    opening_radius: int = 2,
-    closing_radius: int = 3,
-    min_area: int = 50,
+    background_class: int = ProcessingConfig.BACKGROUND_CLASS,
+    opening_radius: int = ProcessingConfig.OPENING_RADIUS,
+    closing_radius: int = ProcessingConfig.CLOSING_RADIUS,
+    min_area: int = ProcessingConfig.MIN_AREA,
     fast_mode: bool = True
 ) -> Tuple[np.ndarray, np.ndarray, Dict[int, np.ndarray]]:
     """
-    Complete pipeline for probabilistic mask aggregation.
+    Complete pipeline for probabilistic multi-class mask aggregation.
     
-    Steps:
-    1. Spatial probability aggregation (neighborhood voting)
-    2. Multi-class decision (argmax with optional threshold)
-    3. Morphological noise suppression
+    Pipeline steps:
+    1. Spatial probability aggregation (neighborhood voting with Gaussian/uniform kernel)
+    2. Multi-class decision (argmax classification with optional confidence threshold)
+    3. Morphological noise suppression (per-class cleaning, removes artifacts)
+    
+    ! The final segmentation contains only integer class IDs (0-5), no negative values.
+    ! Filtered or low-confidence pixels are assigned to background_class.
     
     Args:
         class_masks: Dict {class_id: probability_map (H, W) in [0, 1]}
-        kernel_size: Size of smoothing kernel (odd number)
-        kernel_type: 'gaussian' or 'uniform'
+                    Keys should be integers 0-5 representing class IDs
+        kernel_size: Size of smoothing kernel (odd number, e.g., 5, 7, 9)
+        kernel_type: 'gaussian' for weighted voting, 'uniform' for simple averaging
         sigma: Gaussian standard deviation (default: kernel_size/6)
-        confidence_threshold: Min probability to assign class (optional)
-        background_class: Class ID for low-confidence pixels
-        opening_radius: Morphological opening radius
-        closing_radius: Morphological closing radius
-        min_area: Minimum component area (pixels)
-        fast_mode: Use separable Gaussian (faster for large kernels)
+        confidence_threshold: Minimum probability for class assignment (optional)
+        background_class: Class ID for low-confidence/filtered pixels (default: 0)
+        opening_radius: Morphological opening disk radius
+        closing_radius: Morphological closing disk radius
+        min_area: Minimum connected component area in pixels
+        fast_mode: Use separable Gaussian filter (faster for large kernels)
         
     Returns:
         Tuple of:
-        - final_segmentation: (H, W) cleaned class map
-        - confidence_map: (H, W) maximum probabilities
-        - smoothed_masks: Dict {class_id: smoothed probability map}
+        - final_segmentation: (H, W) integer array with class IDs 0-5
+        - confidence_map: (H, W) float array with maximum probabilities [0, 1]
+        - smoothed_masks: Dict {class_id: smoothed_probability_map (H, W)}
         
     Example:
         >>> masks = {
         ...     0: field_probability_map,
         ...     1: building_probability_map,
-        ...     2: water_probability_map
+        ...     2: water_probability_map,
+        ...     3: woodland_probability_map,
+        ...     4: road_probability_map
         ... }
         >>> segmentation, confidence, smoothed = aggregate_masks(
         ...     masks,
         ...     kernel_size=5,
+        ...     confidence_threshold=0.5,
         ...     min_area=100
         ... )
+        >>> assert segmentation.min() >= 0  # No negative values
+        >>> assert segmentation.max() <= 4  # Valid class range
     """
-    # Step 1: Spatial probability aggregation
+    # ! Step 1: Spatial probability aggregation (neighborhood voting)
     if fast_mode:
         smoothed_masks = aggregate_spatial_probabilities_fast(
             class_masks,
@@ -436,95 +455,22 @@ def aggregate_masks(
             sigma=sigma
         )
     
-    # Step 2: Multi-class decision
+    # ! Step 2: Multi-class decision (winner-takes-all with optional threshold)
     class_map, confidence_map = assign_max_probability_class(
         smoothed_masks,
         confidence_threshold=confidence_threshold,
         background_class=background_class
     )
     
-    # Step 3: Morphological noise suppression
+    # ! Step 3: Morphological noise suppression (removes artifacts, assigns background)
     final_segmentation = suppress_noise_per_class(
         class_map,
         opening_radius=opening_radius,
         closing_radius=closing_radius,
-        min_area=min_area
+        min_area=min_area,
+        background_class=background_class
     )
     
+    # ! Ensure no negative values in final output
+    final_segmentation = np.maximum(final_segmentation, 0)
     return final_segmentation, confidence_map, smoothed_masks
-
-
-# ============================================================================
-# USAGE EXAMPLE
-# ============================================================================
-
-if __name__ == "__main__":
-    # Create synthetic example
-    print("Creating synthetic probability maps...")
-    
-    h, w = 512, 512
-    
-    # Simulate probability maps for 3 classes
-    np.random.seed(42)
-    
-    # Class 0: field (top-left region)
-    field_mask = np.zeros((h, w), dtype=np.float32)
-    field_mask[:h//2, :w//2] = 0.8
-    field_mask += np.random.normal(0, 0.1, (h, w))
-    field_mask = np.clip(field_mask, 0, 1)
-    
-    # Class 1: building (center region)
-    building_mask = np.zeros((h, w), dtype=np.float32)
-    building_mask[h//4:3*h//4, w//4:3*w//4] = 0.9
-    building_mask += np.random.normal(0, 0.15, (h, w))
-    building_mask = np.clip(building_mask, 0, 1)
-    
-    # Class 2: water (bottom-right region)
-    water_mask = np.zeros((h, w), dtype=np.float32)
-    water_mask[h//2:, w//2:] = 0.85
-    water_mask += np.random.normal(0, 0.12, (h, w))
-    water_mask = np.clip(water_mask, 0, 1)
-    
-    class_masks = {
-        0: field_mask,
-        1: building_mask,
-        2: water_mask
-    }
-    
-    print("\nRunning aggregation pipeline...")
-    
-    # Run pipeline
-    final_seg, confidence, smoothed = aggregate_masks(
-        class_masks,
-        kernel_size=7,
-        kernel_type='gaussian',
-        confidence_threshold=0.3,
-        opening_radius=2,
-        closing_radius=3,
-        min_area=100
-    )
-    
-    print(f"\nResults:")
-    print(f"  Final segmentation shape: {final_seg.shape}")
-    print(f"  Unique classes: {np.unique(final_seg)}")
-    print(f"  Confidence range: [{confidence.min():.3f}, {confidence.max():.3f}]")
-    
-    # Class statistics
-    print(f"\nClass distribution:")
-    for class_id in sorted(class_masks.keys()):
-        pixels = np.sum(final_seg == class_id)
-        percentage = 100 * pixels / final_seg.size
-        print(f"  Class {class_id}: {pixels:6d} pixels ({percentage:5.2f}%)")
-    
-    # Create colored visualization
-    color_map = {
-        -1: [128, 128, 128],  # Background (gray)
-        0: [0, 255, 0],       # Field (green)
-        1: [255, 0, 0],       # Building (red)
-        2: [0, 0, 255]        # Water (blue)
-    }
-    
-    colored = create_colored_segmentation(final_seg, color_map)
-    print(f"\nColored visualization shape: {colored.shape}")
-    
-    print("\nDone!")

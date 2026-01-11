@@ -108,82 +108,12 @@ def process_all_classes(img: np.ndarray) -> Dict[int, np.ndarray]:
     return segmentation_pipeline(img, class_ids=list(CLASS_PROCESSORS.keys()))
 
 
-def merge_masks_majority_vote(
-    class_masks: Dict[int, np.ndarray]
-) -> np.ndarray:
-    """
-    Merge multiple class masks into single segmentation using majority vote.
-    
-    For each pixel, assigns the class with highest confidence score.
-    
-    Args:
-        class_masks: Dictionary mapping class_id -> score_map
-                    Each score_map is (H, W) in [0, 1]
-                    
-    Returns:
-        Segmentation mask (H, W) with integer class IDs
-        
-    Raises:
-        ValueError: If class_masks is empty or shapes don't match
-        
-    Example:
-        >>> masks = segmentation_pipeline(img, class_ids=[0, 1, 2, 3, 4])
-        >>> final_mask = merge_masks_majority_vote(masks)
-        >>> # final_mask[i, j] contains the class ID with highest score at (i, j)
-    """
-    if not class_masks:
-        raise ValueError("class_masks dictionary is empty")
-    
-    # Stack all masks
-    mask_list = []
-    class_ids = []
-    
-    for class_id, mask in sorted(class_masks.items()):
-        if mask.ndim != 2:
-            raise ValueError(f"Mask for class {class_id} is not 2D")
-        mask_list.append(mask)
-        class_ids.append(class_id)
-    
-    # Ensure all masks have same shape
-    shapes = [m.shape for m in mask_list]
-    if len(set(shapes)) > 1:
-        raise ValueError(f"Masks have different shapes: {shapes}")
-    
-    # Stack masks: (H, W, num_classes)
-    stacked = np.stack(mask_list, axis=-1)
-    
-    # Find index of maximum score along class axis
-    max_indices = np.argmax(stacked, axis=-1)
-    
-    # Map indices back to class IDs
-    final_mask = np.zeros_like(max_indices, dtype=np.uint8)
-    for idx, class_id in enumerate(class_ids):
-        final_mask[max_indices == idx] = class_id
-    
-    return final_mask
-
 
 def get_class_name(class_id: int) -> str:
-    """
-    Get human-readable class name.
-    
-    Args:
-        class_id: Integer class ID (0-4)
-        
-    Returns:
-        Class name string
-    """
+    """get human-readable class name."""
     return ClassInfo.CLASS_NAMES.get(class_id, f"Unknown({class_id})")
 
 
 def get_class_color(class_id: int) -> list:
-    """
-    Get RGB color for visualization.
-    
-    Args:
-        class_id: Integer class ID (0-4)
-        
-    Returns:
-        RGB color as [R, G, B] list
-    """
+    """get RGB color for visualization."""
     return ClassInfo.CLASS_COLORS.get(class_id, [128, 128, 128])
