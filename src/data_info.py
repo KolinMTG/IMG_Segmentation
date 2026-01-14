@@ -6,8 +6,10 @@ import numpy as np
 from tqdm import tqdm
 from PIL import Image
 import os
+from typing import List
+import seaborn as sns
 
-from src.cste import ClassInfo
+from src.cste import ClassInfo, FeatureInfo
 from src.logger import get_logger
 
 
@@ -245,6 +247,106 @@ def class_proportion_by_image(labels_path_folder: str) -> None:
     plt.show()
 
 
+def show_feature(feature_path: str, feature_id: List[int]) -> None:
+    """
+    Visualize one to three feature maps from a .npy feature tensor.
+
+    The feature file must have shape (H, W, F).
+    With F being the number of features.
+    The feature values are stored in cste.py file (class FeatureInfo)
+
+    Args:
+        feature_path: Path to .npy feature file
+        feature_id: List of feature indices to visualize (max length = 3)
+    """
+    # Load feature tensor
+    features = np.load(feature_path)
+
+    if features.ndim != 3:
+        raise ValueError("Feature array must have shape (H, W, F)")
+
+    h, w, f = features.shape
+
+    if len(feature_id) == 0 or len(feature_id) > 3:
+        raise ValueError("feature_id must contain 1 to 3 feature indices")
+
+    for idx in feature_id:
+        if idx < 0 or idx >= f:
+            raise IndexError(f"Feature index {idx} out of bounds (0, {f - 1})")
+
+    # Extract selected features
+    selected = features[:, :, feature_id]
+
+    # Normalize each feature independently (min-max)
+    selected_norm = np.zeros_like(selected, dtype=np.float32)
+    for i in range(selected.shape[2]):
+        channel = selected[:, :, i]
+        min_val = channel.min()
+        max_val = channel.max()
+        if max_val > min_val:
+            selected_norm[:, :, i] = (channel - min_val) / (max_val - min_val)
+        else:
+            selected_norm[:, :, i] = 0.0
+
+    # Visualization
+    plt.figure(figsize=(6, 6))
+
+    if selected_norm.shape[2] == 1:
+        # Single feature: heatmap
+        sns.heatmap(
+            selected_norm[:, :, 0],
+            cmap="viridis",
+            cbar=True,
+            square=True
+        )
+        plt.title(f"Feature {FeatureInfo.FEATURE_NAMES[feature_id[0]]} Heatmap")
+
+    else:
+        # 2 or 3 features: RGB projection
+        if selected_norm.shape[2] == 2:
+            # Pad third channel with zeros
+            rgb = np.zeros((h, w, 3), dtype=np.float32)
+            rgb[:, :, 0:2] = selected_norm
+        else:
+            rgb = selected_norm
+
+        plt.imshow(rgb)
+        plt.axis("off")
+        feature_names = [FeatureInfo.FEATURE_NAMES[idx] for idx in feature_id]
+        plt.title(f"Features {feature_names} in RGB projection.")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def show_all_features(feature_path: str, feature_info_cls = FeatureInfo) -> None:
+    """
+    Display a series of relevant visualizations for all feature types
+    from a single .npy feature file (H, W, n_features).
+    
+    Args:
+        feature_path: Path to the .npy feature file
+        feature_info_cls: Class containing feature indices as attributes
+    """
+    feats = np.load(feature_path)
+    
+    # Dynamically generate groups using FeatureInfo class attributes
+    groups = {
+        "RGB": [feature_info_cls.RED, feature_info_cls.GREEN, feature_info_cls.BLUE],
+        "HSV": [feature_info_cls.HUE, feature_info_cls.SATURATION, feature_info_cls.VALUE],
+        "Grayscale & Blurs": [feature_info_cls.GRAYSCALE, feature_info_cls.BLUR_SIGMA_1, feature_info_cls.BLUR_SIGMA_5],
+        "Gradient": [feature_info_cls.GRADIENT_MAG, feature_info_cls.GRADIENT_ORIENT],
+        "Texture": [feature_info_cls.LOCAL_VARIANCE, feature_info_cls.LOCAL_ENTROPY, feature_info_cls.LBP],
+        "Spectral": [feature_info_cls.NDVI, feature_info_cls.WATER_INDEX],
+        "Geometry": [feature_info_cls.ANISOTROPY, feature_info_cls.CORNER_DENSITY]
+    }
+    
+    for group_name, feature_ids in groups.items():
+        log.info(f"Displaying features for group: {group_name}")
+        show_feature(feature_path, feature_ids)
+
+
+
 
 if __name__ == "__main__":
     # Example usage: display a single image with its label
@@ -257,5 +359,8 @@ if __name__ == "__main__":
     # class_proportion(DataPath.LABEL_TRAIN)
     # class_proportion_by_image(DataPath.LABEL_TRAIN)
 
-    show_img_labels(r"data/images/test/M-33-20-D-c-4-2_105.jpg",
-                    r"data/results/predictions/M-33-20-D-c-4-2_105_pred.png")
+    # show_img_labels(r"data/images/test/M-33-20-D-c-4-2_105.jpg",
+    #                 r"data/results/predictions/M-33-20-D-c-4-2_105_pred.png")
+
+    # show_feature(r"data/features/train/M-33-7-A-d-2-3_0.npy", [0, 1, 2])  # Example feature visualization
+    show_all_features(r"data/features/train/M-33-7-A-d-3-2_221.npy")  # Example all features visualization

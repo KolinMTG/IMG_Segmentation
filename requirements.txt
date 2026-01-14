@@ -13,4 +13,5 @@ ipython
 pandas
 scikit-learn
 tqdm
-scikit-image
+numba
+

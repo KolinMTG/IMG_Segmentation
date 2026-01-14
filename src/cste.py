@@ -23,11 +23,23 @@ class DataPath:
     IMG_TRAIN: str = r"data/images/train/"
     IMG_VAL: str = r"data/images/val/"
     IMG_TEST: str = r"data/images/test/"
+
     LABEL_TRAIN: str = r"data/labels/train/"
     LABEL_VAL: str = r"data/labels/val/"
     LABEL_TEST: str = r"data/labels/test/"
+
     REPORT_PATH:str = r"data/reports/"
     RESULT_PATH:str = r"data/results/"
+    MODEL_DIR: str = r"data/models/"
+
+    FEATURE_DIR: str = r"data/features/"
+    FEATURE_TEST: str = r"data/features/test/"
+    FEATURE_TRAIN: str = r"data/features/train/"
+    FEATURE_VAL: str = r"data/features/val/"
+
+    CSV_MAPPING_TRAIN: str = r"data/metadata/train_mapping.csv"
+    CSV_MAPPING_VAL: str = r"data/metadata/val_mapping.csv"
+    CSV_MAPPING_TEST: str = r"data/metadata/test_mapping.csv"
 
 class ResultPath:
     """Result output paths."""
@@ -87,6 +99,80 @@ class ClassInfo:
     }
 
 
+
+class FeatureInfo:
+    """
+    Centralized definition of feature indices for the optimized feature pipeline.
+
+    Each attribute maps a semantic feature name to its corresponding index
+    in the feature tensor of shape (H, W, 19).
+    For more information, check documentation
+    """
+
+    # Color (RGB)
+    RED: int = 0          # Direct from downsampled RGB
+    GREEN: int = 1        # Direct from downsampled RGB
+    BLUE: int = 2         # Direct from downsampled RGB
+
+    # Color (HSV)
+    HUE: int = 3          # From cached HSV
+    SATURATION: int = 4  # From cached HSV
+    VALUE: int = 5       # From cached HSV
+
+    # Intensity
+    GRAYSCALE: int = 6   # From cached grayscale
+
+    # Multi-scale Gaussian blur
+    BLUR_SIGMA_1: int = 7    # Gaussian blur σ=1.0
+    BLUR_SIGMA_2_5: int = 8  # Gaussian blur σ=2.5
+    BLUR_SIGMA_5: int = 9    # Gaussian blur σ=5.0
+
+    # Gradient
+    GRADIENT_MAG: int = 10       # From cached gradients
+    GRADIENT_ORIENT: int = 11    # Orientation from cached gradients
+
+    # Texture
+    LOCAL_VARIANCE: int = 12     # Vectorized with box filters
+    LOCAL_ENTROPY: int = 13      # Numba-accelerated
+    LBP: int = 14                # Local Binary Pattern (skimage)
+
+    # Spectral indices
+    NDVI: int = 15               # Vectorized
+    WATER_INDEX: int = 16        # Vectorized
+
+    # Geometric features
+    ANISOTROPY: int = 17         # Vectorized with box filters
+    CORNER_DENSITY: int = 18     # Vectorized with box filters
+
+    # Total number of features
+    NUM_FEATURES: int = 19
+
+    # Extracted feature indices
+
+    FEATURE_NAMES: List[str] = {
+        0: "Red",
+        1: "Green",
+        2: "Blue",
+        3: "Hue",
+        4: "Saturation",
+        5: "Value",
+        6: "Grayscale",
+        7: "Blur_Sigma_1",
+        8: "Blur_Sigma_2.5",
+        9: "Blur_Sigma_5",
+        10: "Gradient_Magnitude",
+        11: "Gradient_Orientation",
+        12: "Local_Variance",
+        13: "Local_Entropy",
+        14: "LBP",
+        15: "NDVI",
+        16: "Water_Index",
+        17: "Anisotropy",
+        18: "Corner_Density",
+        19: "Num_Features",
+    }
+    
+
 # ============================================================================
 # PROCESSING PARAMETERS
 # ============================================================================
@@ -141,3 +227,10 @@ class ProcessingConfig:
     CLOSING_RADIUS: int = 3
     MIN_AREA: int = 50  # Minimum area to keep a detected region
     CONFIDENCE_THRESHOLD: float = 0.5  # Minimum confidence to accept detection
+
+    #PCA Subsample size
+    PCA_SUBSAMPLE_SIZE: int = 200000
+
+    # Downsampling faction for feature extraction
+    DOWNSAMPLE_FRACTION: float = 0.5
+

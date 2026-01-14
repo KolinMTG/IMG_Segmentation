@@ -7,7 +7,12 @@ from PIL import Image
 from typing import Optional
 import os
 from typing import List, Dict
+from src.logger import get_logger
+import csv
+from pathlib import Path
+from src.cste import DataPath
 
+log = get_logger("io_utils")
 
 def load_image(img_path: str, normalize: bool = True, one_channel: bool = False) -> np.ndarray:
     """
@@ -90,7 +95,7 @@ def list_dir_endwith(
         suffixes: Tuple of file extensions to filter by
         
     Returns:
-        List of file paths matching the suffixes
+        List of file paths matching the suffixes (initial given directory + filename)
     """
     if not os.path.isdir(dir_path):
         raise NotADirectoryError(f"Not a directory: {dir_path}")
@@ -98,3 +103,51 @@ def list_dir_endwith(
     list_files_names = os.listdir(dir_path)
     list_selected_files = [f for f in list_files_names if "."+f.split('.')[-1].lower() in suffixes]
     return [os.path.join(dir_path, f) for f in list_selected_files]
+
+
+def get_filename_noext(path: str) -> str:
+    """Return the file name without its extension from a given path.
+    Example : '/path/to/file/image.jpg' -> 'image'
+    """
+    filename = os.path.basename(path)
+    name, _ = os.path.splitext(filename)
+    return name
+
+def build_mapping_csv(
+    img_dir: str,
+    label_dir: str,
+    feature_dir: str,
+    output_csv_path: str = DataPath.CSV_MAPPING_TRAIN
+) -> None:
+    """
+    Build a coherent CSV mapping for training data.
+    CSV columns: img_id, img_path, label_path, feature_path
+    """
+    img_paths = list_dir_endwith(img_dir, ".jpg")
+    processed = 0
+    skipped = 0
+    rows: List[List[str]] = []
+
+    Path(feature_dir).mkdir(parents=True, exist_ok=True)
+
+    for img_path in img_paths:
+        img_id = get_filename_noext(img_path)
+        label_path = os.path.join(label_dir, img_id + ".png")
+        feature_path = os.path.join(feature_dir, img_id + ".npy")
+
+        rows.append([img_id, img_path, label_path, feature_path])
+        processed += 1
+
+    # Write CSV
+    output_csv_path = Path(output_csv_path)
+    output_csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_csv_path, mode="w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["img_id", "img_path", "label_path", "feature_path"])
+        writer.writerows(rows)
+
+    log.info(
+        f"Dataset mapping completed: {processed}/{len(img_paths)} files processed successfully "
+        f"({skipped} skipped)"
+    )
