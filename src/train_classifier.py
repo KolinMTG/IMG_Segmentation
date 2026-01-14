@@ -29,10 +29,10 @@ from sklearn.decomposition import PCA
 import cv2
 import pandas as pd
 
-from general_processing import extract_features
-from cste import ClassInfo, DataPath, ProcessingConfig
-from io_utils import list_dir_endwith, get_filename_noext
+
+from cste import ClassInfo, DataPath, ProcessingConfig, CSVKeys
 from logger import get_logger
+from tqdm import tqdm
 
 import os
 
@@ -77,7 +77,6 @@ class BayesianPixelClassifier:
     
     def _compute_class_priors(
         self,
-        image_paths: List[str],
         label_paths: List[str]
     ) -> None:
         """
@@ -86,14 +85,18 @@ class BayesianPixelClassifier:
         ! Priors are class pixel frequencies across all training images
         
         Args:
-            image_paths: List of training image file paths
             label_paths: List of corresponding label mask file paths
         """
+        log.info(f"Computing class priors from training data, number of images: {len(label_paths)}")
         class_counts = {c: 0 for c in ClassInfo.CLASS_NAMES.keys()}
         total_pixels = 0
         
-        for label_path in label_paths:
+        for label_path in tqdm(label_paths):
             labels = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
+
+            if labels is None:
+                log.warning(f"Label file not found or unreadable: {label_path}, skipping.")
+                continue
             
             for class_id in ClassInfo.CLASS_NAMES.keys():
                 class_counts[class_id] += np.sum(labels == class_id)
@@ -105,6 +108,7 @@ class BayesianPixelClassifier:
             self.class_priors[class_id] = (
                 (class_counts[class_id] + 1) / (total_pixels + len(ClassInfo.CLASS_NAMES))
             )
+        log.info(f"Computed class priors: {self.class_priors}")
     
     def _adaptive_sample_size(self, class_id: int) -> int:
         """
@@ -169,94 +173,107 @@ class BayesianPixelClassifier:
         return class_pixels
     
     def train(
-        self,
-        image_paths: List[str],
-        label_paths: List[str],
-        feature_paths_dict: Optional[Dict[str, str]] = {}
-    ) -> None:
+    self,
+    image_paths: List[str],
+    label_paths: List[str],
+    feature_paths: List[str],
+) -> None:
         """
         Train GMM models for all classes with proper Bayesian setup.
-        
+        Handles feature downsampling, label resizing, and errors robustly.
+
         Args:
             image_paths: List[str]
             label_paths: List[str]
-            feature_paths: Optional[List[str]] = None
+            feature_paths: List[str]
         """
-        # ! Step 1: Compute class priors P(c)
-        self._compute_class_priors(image_paths, label_paths)
-        
-        # ! Step 2: Collect training samples for all classes
-        class_samples: Dict[int, List[np.ndarray]] = {
-            c: [] for c in ClassInfo.CLASS_NAMES.keys()
-        }
-        
-        for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
-            log.info(f"Processing {img_path} for training ({i+1}/{len(image_paths)})")
-            img = cv2.imread(img_path)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img = img.astype(np.float32) / 255.0
-            
-            labels = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
-            
-            # Extract features if not provided in feature_paths_dict
-            if  img_path in feature_paths_dict:
-                features = np.load(feature_paths_dict[img_path])
-            else:
-                features = extract_features(img, normalize=True)
-            
-            # Sample pixels for each class
-            for class_id in ClassInfo.CLASS_NAMES.keys():
-                samples = self._sample_pixels(features, labels, class_id)
-                if len(samples) > 0:
-                    class_samples[class_id].append(samples)
-        
-        # ! Step 3: Optional PCA dimensionality reduction
+        log.info("Starting training of BayesianPixelClassifier")
+        log.info(f"Images: {len(image_paths)}, Labels: {len(label_paths)}, Features: {len(feature_paths)}")
+        # Step 1: Compute class priors
+        self._compute_class_priors(label_paths)
+
+        # Step 2: Initialize storage for class samples
+        class_samples: Dict[int, List[np.ndarray]] = {c: [] for c in ClassInfo.CLASS_NAMES.keys()}
+
+        for i, (img_path, label_path, feature_path) in enumerate(zip(image_paths, label_paths, feature_paths)):
+            log.info(f"Processing {img_path} ({i+1}/{len(image_paths)})")
+
+            try:
+                # Load image
+                img = cv2.imread(img_path)
+                if img is None:
+                    log.warning(f"Image file not found or unreadable: {img_path}, skipping.")
+                    continue
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+
+                # Load label
+                labels = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
+                if labels is None:
+                    log.warning(f"Label file not found or unreadable: {label_path}, skipping.")
+                    continue
+
+                # Load feature
+                if feature_path is None or not os.path.exists(feature_path):
+                    log.warning(f"Feature file not found or unreadable: {feature_path}, skipping {img_path}.")
+                    continue
+
+                try:
+                    feature = np.load(feature_path)
+                except Exception as e:
+                    log.warning(f"Failed to load feature file {feature_path}: {e}, skipping {img_path}.")
+                    continue
+
+                # Downsample labels if needed to match feature size
+                if labels.shape[:2] != feature.shape[:2]:
+                    log.warning(
+                        f"Label shape {labels.shape[:2]} does not match feature shape {feature.shape[:2]} for {img_path}. Resizing."
+                    )
+                    labels = cv2.resize(labels, (feature.shape[1], feature.shape[0]), interpolation=cv2.INTER_NEAREST)
+
+                # Sample pixels for each class
+                for class_id in ClassInfo.CLASS_NAMES.keys():
+                    samples = self._sample_pixels(feature, labels, class_id)
+                    if len(samples) > 0:
+                        class_samples[class_id].append(samples)
+
+            except Exception as e:
+                log.warning(f"Unexpected error processing {img_path}: {e}")
+                continue
+
+        # Step 3: Optional PCA
         if self.use_pca:
-            # Concatenate all samples for PCA fitting
-            all_samples = []
-            for samples_list in class_samples.values():
-                if len(samples_list) > 0:
-                    all_samples.append(np.vstack(samples_list))
-            
+            all_samples = [np.vstack(slist) for slist in class_samples.values() if len(slist) > 0]
             if len(all_samples) > 0:
                 all_data = np.vstack(all_samples)
-                
-                # ! Subsample if too many points
                 if len(all_data) > ProcessingConfig.PCA_SUBSAMPLE_SIZE:
-                    indices = np.random.choice(
-                        len(all_data),
-                        ProcessingConfig.PCA_SUBSAMPLE_SIZE,
-                        replace=False
-                    )
+                    indices = np.random.choice(len(all_data), ProcessingConfig.PCA_SUBSAMPLE_SIZE, replace=False)
                     all_data = all_data[indices]
-                
-                # Fit PCA
                 self.pca = PCA(n_components=self.n_pca_components, whiten=True)
                 self.pca.fit(all_data)
                 log.info("PCA fitting completed")
-        
-        # ! Step 4: Train one GMM per class
+
+        # Step 4: Train GMM per class
         for class_id, class_name in ClassInfo.CLASS_NAMES.items():
             if len(class_samples[class_id]) == 0:
+                log.warning(f"No samples collected for class {class_name} ({class_id}), skipping GMM training.")
                 continue
-            
+
             X = np.vstack(class_samples[class_id])
-            
-            # Apply PCA if enabled
             if self.use_pca and self.pca is not None:
                 X = self.pca.transform(X)
-            
-            # Fit GMM with diagonal covariance
+
             gmm = GaussianMixture(
                 n_components=self.n_components,
                 covariance_type='diag',
                 max_iter=100,
                 random_state=42,
-                reg_covar=1e-6  # Regularization for numerical stability
+                reg_covar=1e-6
             )
-            
             gmm.fit(X)
             self.models[class_id] = gmm
+            log.info(f"GMM trained for class {class_name} ({class_id})")
+
+
     
     def save_models(self, model_dir: str = DataPath.MODEL_DIR) -> None:
         """
@@ -386,7 +403,6 @@ def train_models_from_directory(
     n_components: int = 3,
     use_pca: bool = False,
     n_pca_components: int = 12,
-    downsample_fraction: float = ProcessingConfig.DOWNSAMPLE_FRACTION
 ) -> None:
     """
     Train models using all images in training directory.
@@ -402,24 +418,9 @@ def train_models_from_directory(
 
     # Gather file paths from CSV mapping
     df = pd.read_csv(csv_mapping)
-    img_paths = df['image_path'].tolist()
-    label_paths = df['label_path'].tolist()
-    feature_paths = df['feature_path'].tolist()
-
-    # Build a mapping: feature_name -> feature_path
-    feature_map = {
-        get_filename_noext(path): path
-        for path in feature_paths
-    }
-
-    # Build the final dictionary: image_path -> feature_path
-    img_to_feature = {}
-
-    for img_path in img_paths:
-        img_name = get_filename_noext(img_path)
-        if img_name in feature_map:
-            img_to_feature[img_path] = feature_map[img_name]
-
+    img_paths = df[CSVKeys.IMAGE_PATH].tolist()
+    label_paths = df[CSVKeys.LABEL_PATH].tolist()
+    feature_paths = df[CSVKeys.FEATURE_PATH].tolist()
 
     
     # Error handling for data availability
@@ -435,7 +436,7 @@ def train_models_from_directory(
         adaptive_sampling=True
     )
     
-    classifier.train(img_paths, label_paths, feature_paths=feature_paths)
+    classifier.train(img_paths, label_paths, feature_paths)
     classifier.save_models(model_dir)
 
 

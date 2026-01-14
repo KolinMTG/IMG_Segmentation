@@ -132,7 +132,7 @@ def build_mapping_csv(
 
     for img_path in img_paths:
         img_id = get_filename_noext(img_path)
-        label_path = os.path.join(label_dir, img_id + ".png")
+        label_path = os.path.join(label_dir, img_id + "_m.png")
         feature_path = os.path.join(feature_dir, img_id + ".npy")
 
         rows.append([img_id, img_path, label_path, feature_path])

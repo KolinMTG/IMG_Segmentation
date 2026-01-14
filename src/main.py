@@ -82,11 +82,12 @@ if __name__ == "__main__":
     )
 
     # 2 Extract features for the training dataset (if not already done)
-    extract_features_batch(
-        mapping_csv_path=DataPath.CSV_MAPPING_TRAIN,
-        num_workers=GeneralConfig.NB_JOBS,
-        normalize=True,
-        downsample_fraction=ProcessingConfig.DOWNSAMPLE_FRACTION
-    )
+    # extract_features_batch(
+    #     mapping_csv_path=DataPath.CSV_MAPPING_TRAIN,
+    #     num_workers=GeneralConfig.NB_JOBS,
+    #     normalize=True,
+    #     downsample_fraction=ProcessingConfig.DOWNSAMPLE_FRACTION
+    # )
 
     # 3 Train GMM models from training data
+    train_models_from_directory()

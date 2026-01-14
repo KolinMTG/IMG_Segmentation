@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, Optional
 from sklearn.decomposition import PCA
 
-from general_processing import extract_features
+from optimized_feature_pipeline import extract_features
 from cste import ClassInfo, DataPath
 
 

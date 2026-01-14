@@ -62,6 +62,13 @@ class TestPath:
                                   r"data/labels/test/M-33-7-A-d-2-3_30.png",
                                   r"data/labels/test/M-33-7-A-d-2-3_40.png"]
 
+    PLOT_PATH : str = r"documents/plot/"
+
+class CSVKeys:
+    """Keys for CSV mapping files."""
+    IMAGE_PATH: str = "img_path"
+    LABEL_PATH: str = "label_path"
+    FEATURE_PATH: str = "feature_path"
 
 
 # ============================================================================
@@ -149,7 +156,7 @@ class FeatureInfo:
 
     # Extracted feature indices
 
-    FEATURE_NAMES: List[str] = {
+    FEATURE_NAMES: Dict[int, str] = {
         0: "Red",
         1: "Green",
         2: "Blue",
