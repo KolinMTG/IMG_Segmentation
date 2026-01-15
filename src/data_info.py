@@ -8,8 +8,8 @@ from PIL import Image
 import os
 from typing import List
 import seaborn as sns
-
-from src.cste import ClassInfo, FeatureInfo
+import pandas as pd
+from src.cste import ClassInfo, FeatureInfo, DataPath
 from src.logger import get_logger
 
 
@@ -347,6 +347,68 @@ def show_all_features(feature_path: str, feature_info_cls = FeatureInfo) -> None
 
 
 
+def csv_class_statistic_info(stat_csv_path:str= DataPath.CSV_CLASS_STATISTICS_TRAIN, save: str = None):
+    """
+    Plot statistics from a CSV containing class proportions and counts per image.
+
+    Parameters:
+        stat_csv_path (str): Path to CSV with header:
+            img_id,img_path,label_path,prop_class_0..4,count_class_0..4
+        save (str or None): If None, display the plots. Otherwise, save plots to the specified folder.
+    """
+    # Load CSV
+    df = pd.read_csv(stat_csv_path)
+
+    num_classes = ClassInfo.NUM_CLASSES  # As per header
+
+    # ---------- 1. Distribution of proportions ----------
+    plt.figure(figsize=(10, 6))
+    for c in range(num_classes):
+        sns.kdeplot(df[f"prop_class_{c}"], label=f"Class {ClassInfo.CLASS_NAMES[c]}", fill=True)
+    plt.title("Distribution of class proportions per image")
+    plt.xlabel("Proportion")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.tight_layout()
+    if save:
+        os.makedirs(save, exist_ok=True)
+        plt.savefig(os.path.join(save, "class_proportion_distribution.png"))
+        plt.close()
+    else:
+        plt.show()
+
+    # ---------- 2. Number of images containing each class ----------
+    presence = [(df[f"count_class_{c}"] > 0).sum() for c in range(num_classes)]
+    plt.figure(figsize=(8, 5))
+    sns.barplot(x=[f"Class {ClassInfo.CLASS_NAMES[c]}" for c in range(num_classes)], y=presence)
+    plt.title("Number of images containing each class")
+    plt.ylabel("Number of images")
+    plt.xlabel("Class")
+    plt.tight_layout()
+    if save:
+        plt.savefig(os.path.join(save, "images_per_class.png"))
+        plt.close()
+    else:
+        plt.show()
+
+    # ---------- 3. Histogram of absolute pixel counts ----------
+    plt.figure(figsize=(12, 6))
+    for c in range(num_classes):
+        sns.histplot(df[f"count_class_{c}"], bins=50, label=f"Class {ClassInfo.CLASS_NAMES[c]}", kde=False, alpha=0.5)
+    plt.title("Histogram of absolute pixel counts per class")
+    plt.xlabel("Pixel count")
+    plt.ylabel("Number of images")
+    plt.legend()
+    plt.tight_layout()
+    if save:
+        plt.savefig(os.path.join(save, "pixel_count_histograms.png"))
+        plt.close()
+    else:
+        plt.show()
+
+
+
+
 
 if __name__ == "__main__":
     # Example usage: display a single image with its label
@@ -363,4 +425,5 @@ if __name__ == "__main__":
     #                 r"data/results/predictions/M-33-20-D-c-4-2_105_pred.png")
 
     # show_feature(r"data/features/train/M-33-7-A-d-2-3_0.npy", [0, 1, 2])  # Example feature visualization
-    show_all_features(r"data/features/train/M-33-7-A-d-3-2_221.npy")  # Example all features visualization
+
+    csv_class_statistic_info(stat_csv_path=DataPath.CSV_CLASS_STATISTICS_TRAIN)

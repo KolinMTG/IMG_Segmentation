@@ -117,6 +117,7 @@ def build_mapping_csv(
     img_dir: str,
     label_dir: str,
     feature_dir: str,
+    mask_dir: str,
     output_csv_path: str = DataPath.CSV_MAPPING_TRAIN
 ) -> None:
     """

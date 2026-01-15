@@ -26,7 +26,7 @@ from cste import ClassInfo, DataPath
 
 from src.logger import get_logger
 from src.io_utils import build_mapping_csv
-from src.optimized_feature_pipeline import extract_features_batch
+from feature_extraction_pipeline import extract_features_batch
 from src.cste import GeneralConfig, ProcessingConfig
 
 
@@ -78,6 +78,7 @@ if __name__ == "__main__":
         img_dir=DataPath.IMG_TRAIN,
         label_dir=DataPath.LABEL_TRAIN,
         feature_dir=DataPath.FEATURE_TRAIN,
+        mask_dir=DataPath.MASK_TRAIN,
         output_csv_path=DataPath.CSV_MAPPING_TRAIN
     )
 

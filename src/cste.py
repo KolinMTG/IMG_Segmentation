@@ -36,10 +36,23 @@ class DataPath:
     FEATURE_TEST: str = r"data/features/test/"
     FEATURE_TRAIN: str = r"data/features/train/"
     FEATURE_VAL: str = r"data/features/val/"
+    MASK_TRAIN: str = r"data/masks/train/"
+    MASK_VAL: str = r"data/masks/val/"
+    MASK_TEST: str = r"data/masks/test/"
 
     CSV_MAPPING_TRAIN: str = r"data/metadata/train_mapping.csv"
     CSV_MAPPING_VAL: str = r"data/metadata/val_mapping.csv"
     CSV_MAPPING_TEST: str = r"data/metadata/test_mapping.csv"
+
+    CSV_CLASS_STATISTICS_TRAIN: str = r"data/metadata/train_class_statistics.csv"
+    CSV_CLASS_STATISTICS_VAL: str = r"data/metadata/val_class_statistics.csv"
+    CSV_CLASS_STATISTICS_TEST: str = r"data/metadata/test_class_statistics.csv"
+
+    CSV_SELECTED_IMAGES_TRAIN: str = r"data/metadata/selected_train_images.csv"
+    CSV_SELECTED_IMAGES_VAL: str = r"data/metadata/selected_val_images.csv"
+    CSV_SELECTED_IMAGES_TEST: str = r"data/metadata/selected_test_images.csv"
+
+    
 
 class ResultPath:
     """Result output paths."""
@@ -76,7 +89,7 @@ class CSVKeys:
 # ============================================================================
 
 class ClassInfo:
-    """Semantic class definitions and metadata."""
+    """Semantic class defi  nitions and metadata."""
     
     # Mapping from class ID to class name /!\
     CLASS_NAMES: Dict[int, str] = {
@@ -86,6 +99,7 @@ class ClassInfo:
         3: "Water",
         4: "Road",
     }
+    NUM_CLASSES: int = len(CLASS_NAMES)
     
     # Mapping from class ID to RGB color for visualization
     CLASS_COLORS: Dict[int, list] = {
@@ -178,6 +192,28 @@ class FeatureInfo:
         18: "Corner_Density",
         19: "Num_Features",
     }
+
+    FEATURE_UNET_SELECTION: List[int] = [
+        RED, GREEN, BLUE,     # Color
+        NDVI,                 # Vegetation indicator
+        CORNER_DENSITY,       # Geometric structures (Building/Road)
+        GRADIENT_MAG,         # Edges / contours
+        LOCAL_ENTROPY,        # Texture
+        ANISOTROPY            # Linear structures, orientation
+    ]
+
+    # Subset of features for K-Means (larger, multi-dimensional)
+    FEATURE_KMEANS_SELECTION: List[int] = [
+        RED, GREEN, BLUE,     # Color
+        HUE, SATURATION, VALUE,  # HSV channels for better color separation
+        GRAYSCALE,            # Intensity
+        BLUR_SIGMA_1, BLUR_SIGMA_2_5, BLUR_SIGMA_5,  # Multi-scale smoothing
+        GRADIENT_MAG, GRADIENT_ORIENT,               # Edges
+        LOCAL_VARIANCE, LOCAL_ENTROPY, LBP,          # Texture features
+        NDVI, WATER_INDEX,                            # Spectral indices
+        ANISOTROPY, CORNER_DENSITY                   # Geometric features
+    ]
+        
     
 
 # ============================================================================
@@ -241,3 +277,23 @@ class ProcessingConfig:
     # Downsampling faction for feature extraction
     DOWNSAMPLE_FRACTION: float = 0.5
 
+
+class ImgSelectionRule:
+    """Rules for selecting images based on class proportions."""
+
+    BUILDING_AND_ROAD = {
+        "__logic__": "AND",
+        1: ">=1",  # At least 1 building
+        4: ">=1"   # At least 1 road
+}
+    BUILDING_OR_ROAD_OR_WATER = {
+        "__logic__": "OR",
+        1: ">=1",  # At least 1 building
+        4: ">=1",  # At least 1 road
+        3: ">=1"   # At least 1 water
+}
+    NO_FIELD = {
+        "__logic__": "AND",
+        0: "0"     # No field pixels
+}
+    
