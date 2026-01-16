@@ -6,6 +6,9 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 import json
 from pathlib import Path
 
+from logger import get_logger
+log = get_logger("metrics")
+
 
 def compute_iou(
     y_true: np.ndarray,

@@ -8,6 +8,9 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 from models.base_model import BaseSegmentationModel
+from logger import get_logger
+log = get_logger("model_unet")
+
 
 
 class UNet(BaseSegmentationModel):

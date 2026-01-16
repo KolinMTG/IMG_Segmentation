@@ -71,7 +71,7 @@ def save_class_statistics(mapping_csv_path: str = DataPath.CSV_MAPPING_TRAIN, ou
     Compute class proportions and count for all masks listed in a mapping CSV and save to CSV.
 
     Parameters:
-        mapping_csv_path (str): Path to CSV with header 'img_id,img_path,label_path,feature_path'
+        mapping_csv_path (str): Path to CSV with header 'img_id,img_path,label_pa
         output_csv (str): Path to CSV file to save the results
         num_classes (int): Total number of classes
         mask_ext (str): Expected mask file extension (default ".png")
@@ -112,8 +112,8 @@ def select_img(mapping_csv: str= DataPath.CSV_MAPPING_TRAIN, class_statistics_cs
     Select images from a mapping CSV based on class statistics rules with logic defined in the rule.
 
     Parameters:
-        mapping_csv (str): Path to CSV with columns: img_id,img_path,label_path,feature_path
-        class_statistics_csv (str): CSV with class counts/proportions for each image
+        mapping_csv (str): Path to CSV with columns: img_id,img_path,label_path
+        class_statistics_csv (str): CSV with class counts/proportions for each image header : img_id,img_path,label_path,prop_class_0,...,prop_class_N,count_class_0,...,count_class_N
         rule (dict): Dictionary defining selection rules.
                      Special key "__logic__" = "AND" or "OR" (default = "AND")
                      Other keys = class IDs (int) with condition strings, e.g., ">=1", "0"
@@ -173,9 +173,9 @@ def select_img(mapping_csv: str= DataPath.CSV_MAPPING_TRAIN, class_statistics_cs
             final_mask |= m
 
     # Filter and save
-    mapping_cols = ["img_id_x", "img_path_x", "label_path", "feature_path"]
+    mapping_cols = ["img_id_x", "img_path_x", "label_path"]
     df_filtered = df.loc[final_mask, mapping_cols]
-    df_filtered.columns = ["img_id", "img_path", "label_path", "feature_path"]
+    df_filtered.columns = ["img_id", "img_path", "label_path"]
     df_filtered.to_csv(output_csv, index=False)
     log.info(f"{len(df_filtered)} images selected and saved to {output_csv}")
 

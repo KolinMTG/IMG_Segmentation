@@ -5,13 +5,17 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 import time
 
-from data.dataset import SegmentationDataset
-from models.base_model import BaseSegmentationModel
-from evaluation.metrics import (
+from dataset_utils import SegmentationDataset, create_train_val_split
+
+from class_models.base_model import BaseSegmentationModel
+from evaluations_metrics import (
     evaluate_model,
     save_evaluation_report,
     print_evaluation_summary
 )
+
+from logger import get_logger
+log = get_logger("trainer")
 
 
 class SegmentationTrainer:
@@ -214,7 +218,7 @@ def train_and_evaluate_model(
     log.info(f"{'='*70}\n")
     
     #! Create datasets
-    from data.dataset import create_train_val_split
+    
     
     #! Split training data
     train_csv_split, val_csv_split = create_train_val_split(

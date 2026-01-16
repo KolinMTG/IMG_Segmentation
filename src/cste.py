@@ -2,7 +2,7 @@
 Constants and configuration for satellite image segmentation pipeline.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 # ============================================================================
 # PATH CONFIGURATION
@@ -52,6 +52,9 @@ class DataPath:
     CSV_SELECTED_IMAGES_VAL: str = r"data/metadata/selected_val_images.csv"
     CSV_SELECTED_IMAGES_TEST: str = r"data/metadata/selected_test_images.csv"
 
+    CSV_FEATURE_MASK_MAPPING_TRAIN: str = r"data/metadata/train_feature_mask_mapping.csv"
+    CSV_FEATURE_MASK_MAPPING_VAL: str = r"data/metadata/val_feature_mask_mapping.csv"
+    CSV_FEATURE_MASK_MAPPING_TEST: str = r"data/metadata/test_feature_mask_mapping.csv"
     
 
 class ResultPath:
@@ -59,6 +62,11 @@ class ResultPath:
     PREDICTION_PATH: str = r"data/results/predictions/"
     TEST_PATH: str = r"data/results/tests/"
     EVALUATION_CSV_PATH:str = r"data/results/predictions_metrics.csv"
+
+    MODEL_UNET: str = r"data/models/unet/"
+    MODEL_RANDOM_FOREST: str = r"data/models/random_forest/"
+    MODEL_KMEANS: str = r"data/models/kmeans/"
+    
 
 class TestPath:
     """Paths for test images and labels."""
@@ -276,6 +284,15 @@ class ProcessingConfig:
 
     # Downsampling faction for feature extraction
     DOWNSAMPLE_FRACTION: float = 0.5
+
+    #Data augmentation parameters
+    AUGMENTATION_RATIO: int = 3  # Number of augmented samples per original image
+    CRITICAL_CLASS_IDS: List[int] = [1, 4]  # Building and Road
+    ROTATION_ANGLES: List[int] = [90, 180, 270]  # Degrees
+    ZOOM_RANGE: List[float] = [0.8, 1.2]  # Zoom in/out range
+    BRIGHTNESS_RANGE: List[float] = [-0.1, 0.1]  # +/- brightness adjustment factor
+    CONTRAST_RANGE: List[float] = [0.9, 1.1]  # +/- contrast adjustment factor
+    
 
 
 class ImgSelectionRule:

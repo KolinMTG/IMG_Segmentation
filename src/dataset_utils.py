@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from typing import List, Tuple, Optional
 from pathlib import Path
-
+from logger import get_logger
+log = get_logger("dataset_utils")
 
 class SegmentationDataset:
     """

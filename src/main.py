@@ -15,57 +15,23 @@ from pathlib import Path
 from typing import Dict
 import matplotlib.pyplot as plt
 
-from train_classifier import train_models_from_directory
-from classes.field import process_field
-from classes.building import process_building
-from classes.woodland import process_woodland
-from classes.water import process_water
-from classes.road import process_road
-from classifier_inference import compute_normalized_probabilities
-from cste import ClassInfo, DataPath
+
+# from classes.field import process_field
+# from classes.building import process_building
+# from classes.woodland import process_woodland
+# from classes.water import process_water
+# from classes.road import process_road
+from cste import ClassInfo, DataPath, ImgSelectionRule, GeneralConfig, ProcessingConfig
 
 from src.logger import get_logger
 from src.io_utils import build_mapping_csv
+from src.data_utils import save_class_statistics, select_img
 from feature_extraction_pipeline import extract_features_batch
-from src.cste import GeneralConfig, ProcessingConfig
+from feature_mask_extraction import extract_features_with_augmentation
 
 
 
-
-# ============================================================================
-# SINGLE IMAGE INFERENCE
-# ============================================================================
-
-def single_image_inference_example() -> None:
-    """
-    Example: Run inference on a single image.
-    
-    ! This demonstrates the main API: process_<class>(img) -> prob_map
-    """
-    # Load test image
-    img_path = "data/images/test/M-33-7-A-d-2-3_19.jpg"
-    img = cv2.imread(img_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img.astype(np.float32) / 255.0
-    
-    # ! Get probability map for each class (API unchanged from filter-based version)
-    field_prob = process_field(img)
-    building_prob = process_building(img)
-    woodland_prob = process_woodland(img)
-    water_prob = process_water(img)
-    road_prob = process_road(img)
-    
-    # Verify sum-to-one constraint
-    total_prob = (
-        field_prob + building_prob + woodland_prob + 
-        water_prob + road_prob
-    )
-    
-    # Should be ~1.0 everywhere (within numerical precision)
-    assert np.allclose(total_prob, 1.0, atol=1e-5)
-
-
-
+log = get_logger("main_examples")
 
 # ============================================================================
 # MAIN EXAMPLES
@@ -73,14 +39,65 @@ def single_image_inference_example() -> None:
 
 if __name__ == "__main__":
 
-    # 1 Generate mapping CSV for training data
-    build_mapping_csv(
-        img_dir=DataPath.IMG_TRAIN,
-        label_dir=DataPath.LABEL_TRAIN,
-        feature_dir=DataPath.FEATURE_TRAIN,
-        mask_dir=DataPath.MASK_TRAIN,
-        output_csv_path=DataPath.CSV_MAPPING_TRAIN
-    )
+    #! 1 Generate mapping CSV for each data group (train, test, validation) training data
+    # configs = [
+    #     (DataPath.IMG_TRAIN, DataPath.LABEL_TRAIN, DataPath.FEATURE_TRAIN, DataPath.MASK_TRAIN, DataPath.CSV_MAPPING_TRAIN), # Training data
+    #     (DataPath.IMG_TEST, DataPath.LABEL_TEST, DataPath.FEATURE_TEST, DataPath.MASK_TEST, DataPath.CSV_MAPPING_TEST), # Test data
+    #     (DataPath.IMG_VAL, DataPath.LABEL_VAL, DataPath.FEATURE_VAL, DataPath.MASK_VAL, DataPath.CSV_MAPPING_VAL), # Validation data
+    # ]
+
+    # for img_dir, label_dir, feature_dir, mask_dir, output_csv_path in configs:
+    #     build_mapping_csv(
+    #         img_dir=img_dir,
+    #         label_dir=label_dir,
+    #         output_csv_path=output_csv_path
+    #     )
+    #     log.info(f"Mapping CSV saved to {output_csv_path}")
+    # return 3 CSV files with columns : img_id,img_path,label_path
+
+    #! 2 Select image based on class statistics for training data (e.g., at least 1% building or road or water)
+    # save_class_statistics(
+    #     mapping_csv=DataPath.CSV_MAPPING_TRAIN,
+    #     output_csv=DataPath.CSV_CLASS_STATISTICS_TRAIN,
+    #     num_classes=ClassInfo.NUM_CLASSES
+    # )
+    #return a CSV with class proportions and counts for each image (header : img_id,img_path,label_path,prop_class_0,...,prop_class_N,count_class_0,...,count_class_N)
+
+    # select_img(
+    #     mapping_csv=DataPath.CSV_MAPPING_TRAIN,
+    #     class_statistics_csv=DataPath.CSV_CLASS_STATISTICS_TRAIN,
+    #     rule=ImgSelectionRule.BUILDING_OR_ROAD_OR_WATER,
+    #     output_csv=DataPath.CSV_SELECTED_IMAGES_TRAIN
+    # )
+    # return a CSV with only the selected images (header : img_id,img_path,label_path)
+
+    #! 3 Select feature to extract (only selected classes for training, and all features for testing/validation)
+
+    extraction_feature_configs = [
+        # (DataPath.CSV_SELECTED_IMAGES_TRAIN, DataPath.CSV_FEATURE_MASK_MAPPING_TRAIN, DataPath.FEATURE_TRAIN, DataPath.MASK_TRAIN, ProcessingConfig.AUGMENTATION_RATIO),
+        # (DataPath.CSV_MAPPING_TEST, DataPath.CSV_FEATURE_MASK_MAPPING_TEST, DataPath.FEATURE_TEST, DataPath.MASK_TEST, 0),  # No augmentation for test data
+        (DataPath.CSV_MAPPING_VAL, DataPath.CSV_FEATURE_MASK_MAPPING_VAL, DataPath.FEATURE_VAL, DataPath.MASK_VAL, 0),  # No augmentation for validation data
+    ]
+
+    for input_csv, output_csv, feature_dir, mask_dir, augmentation_ratio in extraction_feature_configs:
+        extract_features_with_augmentation(
+            input_csv_path=input_csv,
+            output_csv_path=output_csv,
+            feature_dir=feature_dir,
+            mask_dir=mask_dir,
+            augmentation_ratio=augmentation_ratio,
+            num_workers=GeneralConfig.NB_JOBS,
+            normalize=True,
+            downsample_fraction=ProcessingConfig.DOWNSAMPLE_FRACTION,
+            clear_folders=True
+        )
+
+
+
+
+
+    # return a CSV and extracted features/masks for training data with augmentation (header : img_id,img_path,label_path,feature_path,mask_path)
+
 
     # 2 Extract features for the training dataset (if not already done)
     # extract_features_batch(
@@ -89,6 +106,3 @@ if __name__ == "__main__":
     #     normalize=True,
     #     downsample_fraction=ProcessingConfig.DOWNSAMPLE_FRACTION
     # )
-
-    # 3 Train GMM models from training data
-    train_models_from_directory()

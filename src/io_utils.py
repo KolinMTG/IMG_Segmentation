@@ -116,8 +116,6 @@ def get_filename_noext(path: str) -> str:
 def build_mapping_csv(
     img_dir: str,
     label_dir: str,
-    feature_dir: str,
-    mask_dir: str,
     output_csv_path: str = DataPath.CSV_MAPPING_TRAIN
 ) -> None:
     """
@@ -129,14 +127,11 @@ def build_mapping_csv(
     skipped = 0
     rows: List[List[str]] = []
 
-    Path(feature_dir).mkdir(parents=True, exist_ok=True)
 
     for img_path in img_paths:
         img_id = get_filename_noext(img_path)
         label_path = os.path.join(label_dir, img_id + "_m.png")
-        feature_path = os.path.join(feature_dir, img_id + ".npy")
-
-        rows.append([img_id, img_path, label_path, feature_path])
+        rows.append([img_id, img_path, label_path])
         processed += 1
 
     # Write CSV
@@ -145,10 +140,26 @@ def build_mapping_csv(
 
     with open(output_csv_path, mode="w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["img_id", "img_path", "label_path", "feature_path"])
+        writer.writerow(["img_id", "img_path", "label_path"])
         writer.writerows(rows)
 
     log.info(
         f"Dataset mapping completed: {processed}/{len(img_paths)} files processed successfully "
         f"({skipped} skipped)"
     )
+
+
+def clear_folder_if_exists(folder_path: str) -> None:
+    """Clear all files in the specified folder if it exists."""
+    if os.path.exists(folder_path) and os.path.isdir(folder_path):
+        for filename in os.listdir(folder_path):
+            file_path = os.path.join(folder_path, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    import shutil
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                log.error(f'Failed to delete {file_path}. Reason: {e}')
+                

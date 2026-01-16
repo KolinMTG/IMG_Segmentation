@@ -11,10 +11,15 @@ import logging
 from pathlib import Path
 
 from data.dataset import SegmentationDataset
-from models.unet import UNet
-from models.random_forest import RandomForestSegmentation
-from models.kmeans import KMeansSegmentation
-from training.trainer import train_and_evaluate_model
+from class_models.unet import UNet
+from class_models.random_forest import RandomForestSegmentation
+from class_models.kmeans import KMeansSegmentation
+from trainer import train_and_evaluate_model
+
+from logger import get_logger
+log = get_logger(__name__)
+
+from cste import ResultPath, DataPath
 
 #! Setup logging
 logging.basicConfig(
@@ -32,8 +37,8 @@ def main():
     #! ========================================
     
     #! Data paths
-    TRAIN_CSV = 'data/train.csv'
-    TEST_CSV = 'data/test.csv'
+    TRAIN_CSV = DataPath.CSV_MAPPING_TRAIN
+    TEST_CSV = DataPath.CSV_MAPPING_TEST
     
     #! Model configuration
     NUM_CLASSES = 5  # e.g., background, building, road, vegetation, water
@@ -52,58 +57,58 @@ def main():
     #! 1. Train U-Net (Deep Learning)
     #! ========================================
     
-    log.info("\n" + "="*70)
-    log.info("TRAINING U-NET")
-    log.info("="*70)
+    # log.info("\n" + "="*70)
+    # log.info("TRAINING U-NET")
+    # log.info("="*70)
     
-    unet = UNet(
-        num_classes=NUM_CLASSES,
-        input_shape=(IMAGE_HEIGHT, IMAGE_WIDTH, NUM_FEATURES),
-        filters=32,
-        use_one_hot=False  # Use integer masks with categorical crossentropy
-    )
+    # unet = UNet(
+    #     num_classes=NUM_CLASSES,
+    #     input_shape=(IMAGE_HEIGHT, IMAGE_WIDTH, NUM_FEATURES),
+    #     filters=32,
+    #     use_one_hot=False  # Use integer masks with categorical crossentropy
+    # )
     
-    unet_results = train_and_evaluate_model(
-        model=unet,
-        train_csv=TRAIN_CSV,
-        test_csv=TEST_CSV,
-        num_classes=NUM_CLASSES,
-        feature_ids=FEATURE_IDS,
-        val_split=VAL_SPLIT,
-        output_dir=f'{OUTPUT_BASE_DIR}/unet',
-        #! U-Net specific training parameters
-        epochs=50,
-        batch_size=8,
-        learning_rate=1e-3
-    )
+    # unet_results = train_and_evaluate_model(
+    #     model=unet,
+    #     train_csv=TRAIN_CSV,
+    #     test_csv=TEST_CSV,
+    #     num_classes=NUM_CLASSES,
+    #     feature_ids=FEATURE_IDS,
+    #     val_split=VAL_SPLIT,
+    #     output_dir=f'{OUTPUT_BASE_DIR}/unet',
+    #     #! U-Net specific training parameters
+    #     epochs=50,
+    #     batch_size=8,
+    #     learning_rate=1e-3
+    # )
     
     #! ========================================
     #! 2. Train Random Forest (Classical Supervised)
     #! ========================================
     
-    log.info("\n" + "="*70)
-    log.info("TRAINING RANDOM FOREST")
-    log.info("="*70)
+    # log.info("\n" + "="*70)
+    # log.info("TRAINING RANDOM FOREST")
+    # log.info("="*70)
     
-    rf = RandomForestSegmentation(
-        num_classes=NUM_CLASSES,
-        n_estimators=100,
-        max_depth=20,
-        n_jobs=-1,  # Use all CPU cores
-        random_state=42
-    )
+    # rf = RandomForestSegmentation(
+    #     num_classes=NUM_CLASSES,
+    #     n_estimators=100,
+    #     max_depth=20,
+    #     n_jobs=-1,  # Use all CPU cores
+    #     random_state=42
+    # )
     
-    rf_results = train_and_evaluate_model(
-        model=rf,
-        train_csv=TRAIN_CSV,
-        test_csv=TEST_CSV,
-        num_classes=NUM_CLASSES,
-        feature_ids=FEATURE_IDS,
-        val_split=VAL_SPLIT,
-        output_dir=f'{OUTPUT_BASE_DIR}/random_forest',
-        #! Random Forest specific training parameters
-        sample_fraction=0.1  # Sample 10% of pixels for memory efficiency
-    )
+    # rf_results = train_and_evaluate_model(
+    #     model=rf,
+    #     train_csv=TRAIN_CSV,
+    #     test_csv=TEST_CSV,
+    #     num_classes=NUM_CLASSES,
+    #     feature_ids=FEATURE_IDS,
+    #     val_split=VAL_SPLIT,
+    #     output_dir=f'{OUTPUT_BASE_DIR}/random_forest',
+    #     #! Random Forest specific training parameters
+    #     sample_fraction=0.1  # Sample 10% of pixels for memory efficiency
+    # )
     
     #! ========================================
     #! 3. Train K-Means (Classical Unsupervised)
@@ -127,39 +132,40 @@ def main():
         num_classes=NUM_CLASSES,
         feature_ids=FEATURE_IDS,
         val_split=VAL_SPLIT,
-        output_dir=f'{OUTPUT_BASE_DIR}/kmeans',
+        output_dir=ResultPath.MODEL_KMEANS,
         #! K-Means specific training parameters
         sample_fraction=0.2  # Sample 20% of pixels for clustering
     )
+    print(kmeans_results)
     
     #! ========================================
     #! Summary Comparison
     #! ========================================
     
-    log.info("\n" + "="*70)
-    log.info("FINAL COMPARISON")
-    log.info("="*70)
+    # log.info("\n" + "="*70)
+    # log.info("FINAL COMPARISON")
+    # log.info("="*70)
     
-    models = {
-        'U-Net': unet_results['evaluation'],
-        'Random Forest': rf_results['evaluation'],
-        'K-Means': kmeans_results['evaluation']
-    }
+    # models = {
+    #     'U-Net': unet_results['evaluation'],
+    #     'Random Forest': rf_results['evaluation'],
+    #     'K-Means': kmeans_results['evaluation']
+    # }
     
-    log.info("\nModel Performance Comparison:")
-    log.info(f"{'Model':<20} {'Accuracy':<12} {'Mean IoU':<12} {'Mean Dice':<12}")
-    log.info("-" * 70)
+    # log.info("\nModel Performance Comparison:")
+    # log.info(f"{'Model':<20} {'Accuracy':<12} {'Mean IoU':<12} {'Mean Dice':<12}")
+    # log.info("-" * 70)
     
-    for model_name, results in models.items():
-        log.info(
-            f"{model_name:<20} "
-            f"{results['accuracy']:<12.4f} "
-            f"{results['mean_iou']:<12.4f} "
-            f"{results['mean_dice']:<12.4f}"
-        )
+    # for model_name, results in models.items():
+    #     log.info(
+    #         f"{model_name:<20} "
+    #         f"{results['accuracy']:<12.4f} "
+    #         f"{results['mean_iou']:<12.4f} "
+    #         f"{results['mean_dice']:<12.4f}"
+    #     )
     
-    log.info("\nAll models trained and evaluated successfully!")
-    log.info(f"Results saved to: {OUTPUT_BASE_DIR}/")
+    # log.info("\nAll models trained and evaluated successfully!")
+    # log.info(f"Results saved to: {OUTPUT_BASE_DIR}/")
 
 
 def example_feature_selection():
@@ -205,9 +211,6 @@ def example_feature_selection():
 
 def example_model_loading():
     """Example of loading a trained model and making predictions."""
-    
-    from models.unet import UNet
-    import numpy as np
     
     #! Load trained model
     unet = UNet(

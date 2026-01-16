@@ -8,7 +8,8 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import silhouette_score
 
 from models.base_model import BaseSegmentationModel
-
+from logger import get_logger
+log = get_logger("model_kmeans")
 
 class KMeansSegmentation(BaseSegmentationModel):
     """

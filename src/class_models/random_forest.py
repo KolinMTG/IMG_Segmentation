@@ -7,7 +7,8 @@ import pickle
 from sklearn.ensemble import RandomForestClassifier
 
 from models.base_model import BaseSegmentationModel
-
+from logger import get_logger
+log = get_logger("model_rd_forest")
 
 class RandomForestSegmentation(BaseSegmentationModel):
     """

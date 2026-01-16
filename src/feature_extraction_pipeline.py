@@ -23,6 +23,7 @@ from numba import jit, prange
 from functools import partial
 
 from cste import ClassInfo, DataPath, GeneralConfig, ProcessingConfig
+from data_augmentation import augment_segmentation_data
 from logger import get_logger
 
 
@@ -503,7 +504,7 @@ def extract_features(
     # ========================================================================
     
     if save and save_path is not None:
-        log.info(f"Saving features to {save_path}")
+        # log.info(f"Saving features to {save_path}")
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         np.save(save_path, features)
     
@@ -559,6 +560,8 @@ def _process_single_image(row: dict,
 
 def extract_features_batch(
     mapping_csv_path: str,
+    feature_dir: str = DataPath.FEATURE_TRAIN,
+    mask_dir: str = DataPath.MASK_TRAIN,
     num_workers: int = GeneralConfig.NB_JOBS,
     normalize: bool = True,
     downsample_fraction: float = ProcessingConfig.DOWNSAMPLE_FRACTION
@@ -567,7 +570,7 @@ def extract_features_batch(
     Extract features for multiple images using multiprocessing.
 
     Reads a CSV file with columns:
-    img_id, img_path, label_path, feature_path
+    img_id, img_path, label_path
 
     Each image is processed independently and features are saved as .npy files.
     Images causing errors are skipped.
@@ -585,6 +588,11 @@ def extract_features_batch(
 
     # Convert DataFrame to list of dicts (picklable)
     rows = df.to_dict(orient="records")
+    # add feature_path to each row
+    for row in rows:
+        img_id = row["img_id"]
+        row["feature_path"] = os.path.join(feature_dir, f"{img_id}.npy")
+
 
     # Prepare worker function (picklable)
     worker_fn = partial(
@@ -625,6 +633,8 @@ def extract_features_batch(
     log.info(f"Failed / Skipped: {error_count}")
     log.info(f"Success rate: {100.0 * success_count / total_images:.2f}%")
     log.info("=" * 60)
+
+
 
 
 if __name__ == "__main__":

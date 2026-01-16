@@ -6,6 +6,8 @@ import numpy as np
 import json
 from pathlib import Path
 
+from logger import get_logger
+log = get_logger("model_base")
 
 class BaseSegmentationModel(ABC):
     """Abstract base class for segmentation models."""
