@@ -20,6 +20,8 @@ from sklearn.preprocessing import StandardScaler
 import cv2
 import warnings
 from src.cste import ClassInfo, FeatureInfo, DataPath
+import json
+import os
 
 warnings.filterwarnings('ignore')
 
@@ -564,6 +566,59 @@ def run_global_analysis(
     print("ANALYSIS COMPLETE")
     print("="*60)
     print(f"All figures saved to: {output_dir}")
+
+
+
+def save_precision_recall_grouped_plot(metrics_json: dict, output_dir: str):
+    """
+    Generate and save a single grouped bar plot for precision and recall per class.
+
+    Args:
+        metrics_json: dictionary containing per_class_metrics
+        output_dir: path to folder where plot will be saved
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Extract class names, precision and recall
+    class_names = []
+    precision_vals = []
+    recall_vals = []
+
+    for cls, vals in metrics_json['per_class_metrics'].items():
+        class_names.append(cls)
+        precision_vals.append(vals.get('precision', 0.0))
+        recall_vals.append(vals.get('recall', 0.0))
+
+    precision_vals = np.array(precision_vals)
+    recall_vals = np.array(recall_vals)
+
+    # Bar plot parameters
+    x = np.arange(len(class_names))  # class positions
+    width = 0.35  # width of the bars
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(x - width/2, precision_vals, width, label='Precision', color='skyblue')
+    plt.bar(x + width/2, recall_vals, width, label='Recall', color='lightgreen')
+
+    # Labels and title
+    plt.ylabel('Score')
+    plt.ylim(0, 1)
+    plt.title('Precision and Recall per Class')
+    plt.xticks(x, class_names)
+    plt.legend()
+
+    # Annotate bars with values
+    for i in range(len(class_names)):
+        plt.text(x[i] - width/2, precision_vals[i] + 0.02, f"{precision_vals[i]:.2f}", ha='center', va='bottom')
+        plt.text(x[i] + width/2, recall_vals[i] + 0.02, f"{recall_vals[i]:.2f}", ha='center', va='bottom')
+
+    # Save figure
+    plot_path = os.path.join(output_dir, "precision_recall_per_class.png")
+    plt.tight_layout()
+    plt.savefig(plot_path, bbox_inches='tight')
+    plt.close()
+
+    print(f"Grouped precision/recall plot saved at: {plot_path}")
 
 
 if __name__ == "__main__":

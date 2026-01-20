@@ -16,11 +16,7 @@ from typing import Dict
 import matplotlib.pyplot as plt
 
 
-# from classes.field import process_field
-# from classes.building import process_building
-# from classes.woodland import process_woodland
-# from classes.water import process_water
-# from classes.road import process_road
+
 from cste import ClassInfo, DataPath, ImgSelectionRule, GeneralConfig, ProcessingConfig
 
 from src.logger import get_logger
@@ -28,6 +24,9 @@ from src.io_utils import build_mapping_csv
 from src.data_utils import save_class_statistics, select_img
 from feature_extraction_pipeline import extract_features_batch
 from feature_mask_extraction import extract_features_with_augmentation
+from inference import run_unet_inference
+from histogram_evaluation import run_histogram_inference
+from training_examples import *
 
 
 
@@ -73,36 +72,55 @@ if __name__ == "__main__":
 
     #! 3 Select feature to extract (only selected classes for training, and all features for testing/validation)
 
-    extraction_feature_configs = [
-        # (DataPath.CSV_SELECTED_IMAGES_TRAIN, DataPath.CSV_FEATURE_MASK_MAPPING_TRAIN, DataPath.FEATURE_TRAIN, DataPath.MASK_TRAIN, ProcessingConfig.AUGMENTATION_RATIO),
-        # (DataPath.CSV_MAPPING_TEST, DataPath.CSV_FEATURE_MASK_MAPPING_TEST, DataPath.FEATURE_TEST, DataPath.MASK_TEST, 0),  # No augmentation for test data
-        (DataPath.CSV_MAPPING_VAL, DataPath.CSV_FEATURE_MASK_MAPPING_VAL, DataPath.FEATURE_VAL, DataPath.MASK_VAL, 0),  # No augmentation for validation data
-    ]
+    # extraction_feature_configs = [
+    #     # (DataPath.CSV_SELECTED_IMAGES_TRAIN, DataPath.CSV_FEATURE_MASK_MAPPING_TRAIN, DataPath.FEATURE_TRAIN, DataPath.MASK_TRAIN, ProcessingConfig.AUGMENTATION_RATIO),
+    #     # (DataPath.CSV_MAPPING_TEST, DataPath.CSV_FEATURE_MASK_MAPPING_TEST, DataPath.FEATURE_TEST, DataPath.MASK_TEST, 0),  # No augmentation for test data
+    #     (DataPath.CSV_MAPPING_VAL, DataPath.CSV_FEATURE_MASK_MAPPING_VAL, DataPath.FEATURE_VAL, DataPath.MASK_VAL, 0),  # No augmentation for validation data
+    # ]
 
-    for input_csv, output_csv, feature_dir, mask_dir, augmentation_ratio in extraction_feature_configs:
-        extract_features_with_augmentation(
-            input_csv_path=input_csv,
-            output_csv_path=output_csv,
-            feature_dir=feature_dir,
-            mask_dir=mask_dir,
-            augmentation_ratio=augmentation_ratio,
-            num_workers=GeneralConfig.NB_JOBS,
-            normalize=True,
-            downsample_fraction=ProcessingConfig.DOWNSAMPLE_FRACTION,
-            clear_folders=True
-        )
-
-
+    # for input_csv, output_csv, feature_dir, mask_dir, augmentation_ratio in extraction_feature_configs:
+    #     extract_features_with_augmentation(
+    #         input_csv_path=input_csv,
+    #         output_csv_path=output_csv,
+    #         feature_dir=feature_dir,
+    #         mask_dir=mask_dir,
+    #         augmentation_ratio=augmentation_ratio,
+    #         num_workers=GeneralConfig.NB_JOBS,
+    #         normalize=True,
+    #         downsample_fraction=ProcessingConfig.DOWNSAMPLE_FRACTION,
+    #         clear_folders=True
+    #     )
 
 
+    #! 4 Train differents models (KMeans, RandomForest, GradientBoosting, UNet)
+    # See training_examples.py for detailed examples of training each model type
+    # train_unet()
 
-    # return a CSV and extracted features/masks for training data with augmentation (header : img_id,img_path,label_path,feature_path,mask_path)
 
+    # train_kmeans()
+    # evaluate_kmeans()
 
-    # 2 Extract features for the training dataset (if not already done)
-    # extract_features_batch(
-    #     mapping_csv_path=DataPath.CSV_MAPPING_TRAIN,
-    #     num_workers=GeneralConfig.NB_JOBS,
-    #     normalize=True,
-    #     downsample_fraction=ProcessingConfig.DOWNSAMPLE_FRACTION
+    # train_unet()
+    # evaluate_unet()
+
+    # run_unet_inference(
+    #     model_path=f"{DataPath.MODEL_DIR}unet/unet_final.keras",
+    #     csv_path=DataPath.CSV_FEATURE_MASK_MAPPING_TEST,
+    #     output_dir=DataPath.UNET_INFERENCE_DIR_POSTTREATMENT,
+    #     selected_features=FeatureInfo.FEATURE_RBG_ONLY,
+    #     posttreatment=True
     # )
+
+    results_df = run_histogram_inference(
+        csv_path=DataPath.CSV_FEATURE_MASK_MAPPING_TEST,
+        kde_path=r"data/models/histogram/histogram_kde_streaming.npz",
+        output_dir=DataPath.HISTOGRAM_DIR,
+        feature_ids=FeatureInfo.FEATURE_UNET_SELECTION,
+        save_scores=False,
+        batch_log_interval=20,
+        output_size=(512, 512),
+        postreatment=True
+    )
+
+    
+

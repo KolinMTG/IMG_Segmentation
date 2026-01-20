@@ -162,4 +162,8 @@ def clear_folder_if_exists(folder_path: str) -> None:
                     shutil.rmtree(file_path)
             except Exception as e:
                 log.error(f'Failed to delete {file_path}. Reason: {e}')
+
+if __name__ == "__main__":
+    load_image("data/images/train/M-33-7-A-d-2-3_0.jpg", normalize=True)
+    print("Shape:", load_image("data/images/train/M-33-7-A-d-2-3_0.jpg").shape)
                 

@@ -16,7 +16,7 @@ Segmentation classique (threshold ou K-means sur la couleur) pour dégrossir “
 
 https://www.kaggle.com/datasets/aletbm/land-cover-from-aerial-imagery-landcover-ai
 
-
+https://landcover.ai.linuxpolska.com/ 
 
 Environement virutelle 
 IMG_SEG

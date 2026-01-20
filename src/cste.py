@@ -55,6 +55,14 @@ class DataPath:
     CSV_FEATURE_MASK_MAPPING_TRAIN: str = r"data/metadata/train_feature_mask_mapping.csv"
     CSV_FEATURE_MASK_MAPPING_VAL: str = r"data/metadata/val_feature_mask_mapping.csv"
     CSV_FEATURE_MASK_MAPPING_TEST: str = r"data/metadata/test_feature_mask_mapping.csv"
+
+    UNET_INFERENCE_DIR: str = r"data/results/unet_inference/"
+    UNET_INFERENCE_DIR_POSTTREATMENT: str = r"data/results/unet_inference_posttreatment/"
+    PREDICTION_VISUALISATION: str = r"data/results/prediction_visualisations/"
+    PREDICTION_VISUALISATION_POSTTREATMENT: str = r"data/results/prediction_visualisations_posttreatment/"
+    HISTOGRAM_DIR: str = r"data/results/histograms_inference/"
+    HISTOGRAM_VISUALISATION: str = r"data/results/histogram_visualisations/"
+    
     
 
 class ResultPath:
@@ -221,6 +229,12 @@ class FeatureInfo:
         NDVI, WATER_INDEX,                            # Spectral indices
         ANISOTROPY, CORNER_DENSITY                   # Geometric features
     ]
+
+    FEATURE_RBG_ONLY : List[int] = [
+        RED, GREEN, BLUE
+    ]
+
+    FEATURE_ALL : List[int] = list(range(NUM_FEATURES))
         
     
 
@@ -293,8 +307,6 @@ class ProcessingConfig:
     BRIGHTNESS_RANGE: List[float] = [-0.1, 0.1]  # +/- brightness adjustment factor
     CONTRAST_RANGE: List[float] = [0.9, 1.1]  # +/- contrast adjustment factor
     
-
-
 class ImgSelectionRule:
     """Rules for selecting images based on class proportions."""
 
@@ -314,3 +326,8 @@ class ImgSelectionRule:
         0: "0"     # No field pixels
 }
     
+
+class HistogramConfig:
+    """Configuration for histogram-based KDE."""
+    NUM_BINS: int = 256  # Number of bins for histogram discretization
+    SMOOTHING_SIGMA: float = 2.0  # Gaussian smoothing sigma for KDE approximation

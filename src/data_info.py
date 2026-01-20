@@ -11,6 +11,7 @@ import seaborn as sns
 import pandas as pd
 from src.cste import ClassInfo, FeatureInfo, DataPath
 from src.logger import get_logger
+import json
 
 
 log = get_logger("data_info.log")
@@ -406,7 +407,254 @@ def csv_class_statistic_info(stat_csv_path:str= DataPath.CSV_CLASS_STATISTICS_TR
     else:
         plt.show()
 
+def show_img_gt_vs_pred(
+    img_path: str,
+    gt_label_path: str,
+    pred_label_path: str,
+    alpha: float = 0.5
+):
+    """
+    Visualize image with ground truth and predicted segmentation masks,
+    including a visual comparison between the two masks.
 
+    Args:
+        img_path: Path to the RGB image
+        gt_label_path: Path to the ground truth mask (PNG, single-channel)
+        pred_label_path: Path to the predicted mask (PNG, single-channel)
+        alpha: Transparency factor for overlays
+    """
+
+    # Load image
+    img = Image.open(img_path).convert("RGB")
+    img_array = np.array(img)
+
+    # Load masks (single-channel, class IDs)
+    gt_label = np.array(Image.open(gt_label_path).convert("L"))
+    pred_label = np.array(Image.open(pred_label_path).convert("L"))
+
+    if gt_label.shape != pred_label.shape:
+        raise ValueError("Ground truth and prediction masks must have the same shape")
+
+    # Class colors and names
+    colors = ClassInfo.CLASS_COLORS
+    class_names = ClassInfo.CLASS_NAMES
+
+    # Build colored GT mask
+    gt_colored = np.zeros((*gt_label.shape, 3), dtype=np.uint8)
+    for class_id, color in colors.items():
+        gt_colored[gt_label == class_id] = color
+
+    # Build colored predicted mask
+    pred_colored = np.zeros((*pred_label.shape, 3), dtype=np.uint8)
+    for class_id, color in colors.items():
+        pred_colored[pred_label == class_id] = color
+
+    # Overlays
+    gt_overlay = (img_array * (1 - alpha) + gt_colored * alpha).astype(np.uint8)
+    pred_overlay = (img_array * (1 - alpha) + pred_colored * alpha).astype(np.uint8)
+
+    # Comparison mask
+    comparison = np.zeros((*gt_label.shape, 3), dtype=np.uint8)
+
+    correct = gt_label == pred_label
+    incorrect = gt_label != pred_label
+
+    comparison[correct] = [0, 255, 0]    # Green = correct
+    comparison[incorrect] = [255, 0, 0]  # Red = error
+
+    # Plot
+    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+
+    axes[0, 0].imshow(img_array)
+    axes[0, 0].set_title("Original Image")
+    axes[0, 0].axis("off")
+
+    axes[0, 1].imshow(gt_colored)
+    axes[0, 1].set_title("Ground Truth Mask")
+    axes[0, 1].axis("off")
+
+    axes[0, 2].imshow(pred_colored)
+    axes[0, 2].set_title("Predicted Mask")
+    axes[0, 2].axis("off")
+
+    axes[1, 0].imshow(gt_overlay)
+    axes[1, 0].set_title("Overlay: Image + Ground Truth")
+    axes[1, 0].axis("off")
+
+    axes[1, 1].imshow(pred_overlay)
+    axes[1, 1].set_title("Overlay: Image + Prediction")
+    axes[1, 1].axis("off")
+
+    axes[1, 2].imshow(comparison)
+    axes[1, 2].set_title("Mask Comparison (Green=OK, Red=Error)")
+    axes[1, 2].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+def generate_prediction_visualizations(
+    img_dir: str,
+    gt_mask_dir: str,
+    pred_mask_dir: str,
+    output_dir: str,
+    alpha: float = 0.5
+) -> None:
+    """
+    Generate and save visual comparisons between images, ground truth masks,
+    and predicted segmentation masks.
+
+    Args:
+        img_dir: Directory containing RGB images
+        gt_mask_dir: Directory containing ground truth masks (PNG, single-channel)
+        pred_mask_dir: Directory containing predicted masks (PNG, single-channel)
+        output_dir: Directory where visualization images will be saved
+        alpha: Transparency factor for overlays
+    """
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    colors = ClassInfo.CLASS_COLORS
+    class_names = ClassInfo.CLASS_NAMES
+
+    pred_files = sorted(os.listdir(pred_mask_dir))
+
+    for fname in pred_files:
+        if not fname.lower().endswith(".png"):
+            continue
+
+        img_id = os.path.splitext(fname)[0].replace("_mask", "")
+
+        img_path = os.path.join(img_dir, f"{img_id}.jpg")
+        gt_path = os.path.join(gt_mask_dir, f"{img_id}_m.png")
+        pred_path = os.path.join(pred_mask_dir, fname)
+        print(img_path, gt_path, pred_path)
+        if not (os.path.exists(img_path) and os.path.exists(gt_path)):
+            continue
+
+        # Load image
+        img = np.array(Image.open(img_path).convert("RGB"))
+
+        # Load masks
+        gt_mask = np.array(Image.open(gt_path).convert("L"))
+        pred_mask = np.array(Image.open(pred_path).convert("L"))
+
+        if gt_mask.shape != pred_mask.shape:
+            raise ValueError(f"Shape mismatch for {img_id}")
+
+        # Build colored masks
+        gt_colored = np.zeros((*gt_mask.shape, 3), dtype=np.uint8)
+        pred_colored = np.zeros((*pred_mask.shape, 3), dtype=np.uint8)
+
+        for class_id, color in colors.items():
+            gt_colored[gt_mask == class_id] = color
+            pred_colored[pred_mask == class_id] = color
+
+        # Overlays
+        gt_overlay = (img * (1 - alpha) + gt_colored * alpha).astype(np.uint8)
+        pred_overlay = (img * (1 - alpha) + pred_colored * alpha).astype(np.uint8)
+
+        # Comparison mask
+        comparison = np.zeros((*gt_mask.shape, 3), dtype=np.uint8)
+        comparison[gt_mask == pred_mask] = [0, 255, 0]
+        comparison[gt_mask != pred_mask] = [255, 0, 0]
+
+        # Plot
+        fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+
+        axes[0, 0].imshow(img)
+        axes[0, 0].set_title("Original Image")
+        axes[0, 0].axis("off")
+
+        axes[0, 1].imshow(gt_colored)
+        axes[0, 1].set_title("Ground Truth Mask")
+        axes[0, 1].axis("off")
+
+        axes[0, 2].imshow(pred_colored)
+        axes[0, 2].set_title("Predicted Mask")
+        axes[0, 2].axis("off")
+
+        axes[1, 0].imshow(gt_overlay)
+        axes[1, 0].set_title("Overlay: Image + Ground Truth")
+        axes[1, 0].axis("off")
+
+        axes[1, 1].imshow(pred_overlay)
+        axes[1, 1].set_title("Overlay: Image + Prediction")
+        axes[1, 1].axis("off")
+
+        axes[1, 2].imshow(comparison)
+        axes[1, 2].set_title("Comparison (Green=Correct, Red=Error)")
+        axes[1, 2].axis("off")
+
+        plt.tight_layout()
+
+        out_path = os.path.join(output_dir, f"{img_id}_comparison.png")
+        plt.savefig(out_path, dpi=150)
+        plt.close(fig)
+
+    print("Visualization generation completed.")
+
+
+
+
+
+def save_precision_recall_grouped_plot(json_path: str, output_dir: str):
+    """
+    Load metrics from a JSON file and save a grouped bar plot
+    showing precision and recall per class.
+
+    Args:
+        json_path: path to the JSON file containing evaluation metrics
+        output_dir: directory where the plot will be saved
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Load JSON file
+    with open(json_path, "r") as f:
+        metrics_data = json.load(f)
+
+    per_class_metrics = metrics_data["per_class_metrics"]
+
+    # Extract data
+    class_names = []
+    precision_vals = []
+    recall_vals = []
+
+    for cls_name, vals in per_class_metrics.items():
+        class_names.append(cls_name)
+        precision_vals.append(vals.get("precision", 0.0))
+        recall_vals.append(vals.get("recall", 0.0))
+
+    precision_vals = np.array(precision_vals)
+    recall_vals = np.array(recall_vals)
+
+    # Plot configuration
+    x = np.arange(len(class_names))
+    width = 0.35
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(x - width / 2, precision_vals, width, label="Precision")
+    plt.bar(x + width / 2, recall_vals, width, label="Recall")
+
+    plt.ylabel("Score")
+    plt.ylim(0.0, 1.0)
+    plt.title("Precision and Recall per Class")
+    plt.xticks(x, class_names)
+    plt.legend()
+
+    # Annotate bars
+    for i in range(len(class_names)):
+        plt.text(x[i] - width / 2, precision_vals[i] + 0.02,
+                 f"{precision_vals[i]:.2f}", ha="center", va="bottom")
+        plt.text(x[i] + width / 2, recall_vals[i] + 0.02,
+                 f"{recall_vals[i]:.2f}", ha="center", va="bottom")
+
+    # Save figure
+    output_path = os.path.join(output_dir, "precision_recall_per_class.png")
+    plt.tight_layout()
+    plt.savefig(output_path, bbox_inches="tight")
+    plt.close()
+
+    print(f"Grouped precision/recall plot saved at: {output_path}")
 
 
 
@@ -421,9 +669,28 @@ if __name__ == "__main__":
     # class_proportion(DataPath.LABEL_TRAIN)
     # class_proportion_by_image(DataPath.LABEL_TRAIN)
 
-    # show_img_labels(r"data/images/test/M-33-20-D-c-4-2_105.jpg",
-    #                 r"data/results/predictions/M-33-20-D-c-4-2_105_pred.png")
+    #! PReiction visualization for UNet post-treatment
+    # generate_prediction_visualizations(
+    # img_dir = DataPath.IMG_TEST,
+    # gt_mask_dir = DataPath.LABEL_TEST,
+    # pred_mask_dir = DataPath.UNET_INFERENCE_DIR_POSTTREATMENT,
+    # output_dir = DataPath.PREDICTION_VISUALISATION_POSTTREATMENT,
+    # alpha = 0.5)
 
-    # show_feature(r"data/features/train/M-33-7-A-d-2-3_0.npy", [0, 1, 2])  # Example feature visualization
-
-    csv_class_statistic_info(stat_csv_path=DataPath.CSV_CLASS_STATISTICS_TRAIN)
+    #! Prediction visualization for Histogram inference
+    # generate_prediction_visualizations(
+    #     img_dir = DataPath.IMG_TEST,
+    #     gt_mask_dir = DataPath.LABEL_TEST,
+    #     pred_mask_dir = DataPath.HISTOGRAM_DIR,
+    #     output_dir = DataPath.HISTOGRAM_VISUALISATION,
+    #     alpha = 0.5)
+    
+    # Example: save precision/recall grouped plot
+    save_precision_recall_grouped_plot(
+        json_path=r"data/results/evaluation_report/unet_inference/evaluation_report.json",
+        output_dir=r"data/results/evaluation_report/unet_inference"
+    )
+    save_precision_recall_grouped_plot(
+        json_path=r"data/results/evaluation_report/unet_posttreatment/evaluation_report.json",
+        output_dir=r"data/results/evaluation_report/unet_posttreatment"
+    )
