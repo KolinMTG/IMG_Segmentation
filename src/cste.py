@@ -20,13 +20,13 @@ class GeneralPath:
 
 class DataPath:
     """Data directory paths."""
-    IMG_TRAIN: str = r"data/images/train/"
-    IMG_VAL: str = r"data/images/val/"
-    IMG_TEST: str = r"data/images/test/"
+    IMG_TRAIN: str = r"data/images/train/" #! Training images directory
+    IMG_VAL: str = r"data/images/val/" #! Validation images directory
+    IMG_TEST: str = r"data/images/test/" #! Test images directory
 
-    LABEL_TRAIN: str = r"data/labels/train/"
-    LABEL_VAL: str = r"data/labels/val/"
-    LABEL_TEST: str = r"data/labels/test/"
+    LABEL_TRAIN: str = r"data/labels/train/" #! Training labels directory
+    LABEL_VAL: str = r"data/labels/val/" #! Validation labels directory
+    LABEL_TEST: str = r"data/labels/test/" #! Test labels directory
 
     REPORT_PATH:str = r"data/reports/"
     RESULT_PATH:str = r"data/results/"

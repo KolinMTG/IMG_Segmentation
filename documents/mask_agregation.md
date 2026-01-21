@@ -53,7 +53,7 @@ Input: Multiple Probability Maps
               ↓
 ┌────────────────────────────────────────────────┐
 │ Step 2: Multi-Class Decision                   │
-│ - For each pixel: class = argmax_c P'_c(x,y)  │
+│ - For each pixel: class = argmax_c P'_c(x,y)   │
 │ - Optional: threshold low-confidence pixels    │
 └────────────────────────────────────────────────┘
               ↓
