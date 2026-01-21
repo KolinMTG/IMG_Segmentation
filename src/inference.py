@@ -7,6 +7,7 @@ from tensorflow import keras
 from src.cste import DataPath, FeatureInfo
 from src.post_treatement import posttreat_pipeline
 
+
 def run_unet_inference(
     model_path: str,
     csv_path: str = DataPath.CSV_FEATURE_MASK_MAPPING_TEST,
@@ -14,7 +15,7 @@ def run_unet_inference(
     selected_features: List[int] = FeatureInfo.FEATURE_RBG_ONLY,
     output_size: Tuple[int, int] | None = (512, 512),
     posttreatment: bool = False,
-    **kwargs
+    **kwargs,
 ) -> None:
     """
     Run inference with a trained Keras segmentation model and save predicted masks as PNG.
@@ -63,14 +64,11 @@ def run_unet_inference(
         # Resize mask if required (nearest neighbor only)
         if output_size is not None:
             pred_mask = cv2.resize(
-                pred_mask,
-                output_size,
-                interpolation=cv2.INTER_NEAREST
+                pred_mask, output_size, interpolation=cv2.INTER_NEAREST
             )
 
         if posttreatment:
             pred_mask = posttreat_pipeline(pred_mask, **kwargs)
-
 
         # Save mask as single-channel PNG
         output_path = os.path.join(output_dir, f"{img_id}_mask.png")

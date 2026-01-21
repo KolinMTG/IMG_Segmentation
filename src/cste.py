@@ -4,32 +4,36 @@ Constants and configuration for satellite image segmentation pipeline.
 
 from typing import Dict, List, Tuple
 
+
 # ============================================================================
 # PATH CONFIGURATION
 # ============================================================================
 class GeneralConfig:
     """General project configuration."""
+
     RANDOM_SEED: int = 42
     NB_JOBS: int = 4  # Number of parallel jobs for processing
 
 
 class GeneralPath:
     """General project paths."""
+
     LOG_PATH: str = r".logs/"
 
 
 class DataPath:
     """Data directory paths."""
-    IMG_TRAIN: str = r"data/images/train/" #! Training images directory
-    IMG_VAL: str = r"data/images/val/" #! Validation images directory
-    IMG_TEST: str = r"data/images/test/" #! Test images directory
 
-    LABEL_TRAIN: str = r"data/labels/train/" #! Training labels directory
-    LABEL_VAL: str = r"data/labels/val/" #! Validation labels directory
-    LABEL_TEST: str = r"data/labels/test/" #! Test labels directory
+    IMG_TRAIN: str = r"data/images/train/"  #! Training images directory
+    IMG_VAL: str = r"data/images/val/"  #! Validation images directory
+    IMG_TEST: str = r"data/images/test/"  #! Test images directory
 
-    REPORT_PATH:str = r"data/reports/"
-    RESULT_PATH:str = r"data/results/"
+    LABEL_TRAIN: str = r"data/labels/train/"  #! Training labels directory
+    LABEL_VAL: str = r"data/labels/val/"  #! Validation labels directory
+    LABEL_TEST: str = r"data/labels/test/"  #! Test labels directory
+
+    REPORT_PATH: str = r"data/reports/"
+    RESULT_PATH: str = r"data/results/"
     MODEL_DIR: str = r"data/models/"
 
     FEATURE_DIR: str = r"data/features/"
@@ -52,49 +56,62 @@ class DataPath:
     CSV_SELECTED_IMAGES_VAL: str = r"data/metadata/selected_val_images.csv"
     CSV_SELECTED_IMAGES_TEST: str = r"data/metadata/selected_test_images.csv"
 
-    CSV_FEATURE_MASK_MAPPING_TRAIN: str = r"data/metadata/train_feature_mask_mapping.csv"
+    CSV_FEATURE_MASK_MAPPING_TRAIN: str = (
+        r"data/metadata/train_feature_mask_mapping.csv"
+    )
     CSV_FEATURE_MASK_MAPPING_VAL: str = r"data/metadata/val_feature_mask_mapping.csv"
     CSV_FEATURE_MASK_MAPPING_TEST: str = r"data/metadata/test_feature_mask_mapping.csv"
 
     UNET_INFERENCE_DIR: str = r"data/results/unet_inference/"
-    UNET_INFERENCE_DIR_POSTTREATMENT: str = r"data/results/unet_inference_posttreatment/"
+    UNET_INFERENCE_DIR_POSTTREATMENT: str = (
+        r"data/results/unet_inference_posttreatment/"
+    )
     PREDICTION_VISUALISATION: str = r"data/results/prediction_visualisations/"
-    PREDICTION_VISUALISATION_POSTTREATMENT: str = r"data/results/prediction_visualisations_posttreatment/"
+    PREDICTION_VISUALISATION_POSTTREATMENT: str = (
+        r"data/results/prediction_visualisations_posttreatment/"
+    )
     HISTOGRAM_DIR: str = r"data/results/histograms_inference/"
     HISTOGRAM_VISUALISATION: str = r"data/results/histogram_visualisations/"
-    
-    
+
 
 class ResultPath:
     """Result output paths."""
+
     PREDICTION_PATH: str = r"data/results/predictions/"
     TEST_PATH: str = r"data/results/tests/"
-    EVALUATION_CSV_PATH:str = r"data/results/predictions_metrics.csv"
+    EVALUATION_CSV_PATH: str = r"data/results/predictions_metrics.csv"
 
     MODEL_UNET: str = r"data/models/unet/"
     MODEL_RANDOM_FOREST: str = r"data/models/random_forest/"
     MODEL_KMEANS: str = r"data/models/kmeans/"
-    
+
 
 class TestPath:
     """Paths for test images and labels."""
+
     IMG_TEST: str = r"data/images/test/M-33-7-A-d-2-3_19.jpg"
     LABEL_TEST: str = r"data/labels/test/M-33-7-A-d-2-3_19.png"
-    IMG_TEST_LIST: List[str] = [r"data/images/test/M-33-7-A-d-2-3_19.jpg",
-                                r"data/images/test/M-33-7-A-d-2-3_27.jpg",
-                                r"data/images/test/M-33-7-A-d-2-3_29.jpg",
-                                r"data/images/test/M-33-7-A-d-2-3_30.jpg",
-                                r"data/images/test/M-33-7-A-d-2-3_40.jpg"]
-    LABEL_TEST_LIST: List[str] = [r"data/labels/test/M-33-7-A-d-2-3_19.png",
-                                  r"data/labels/test/M-33-7-A-d-2-3_27.png",
-                                  r"data/labels/test/M-33-7-A-d-2-3_29.png",
-                                  r"data/labels/test/M-33-7-A-d-2-3_30.png",
-                                  r"data/labels/test/M-33-7-A-d-2-3_40.png"]
+    IMG_TEST_LIST: List[str] = [
+        r"data/images/test/M-33-7-A-d-2-3_19.jpg",
+        r"data/images/test/M-33-7-A-d-2-3_27.jpg",
+        r"data/images/test/M-33-7-A-d-2-3_29.jpg",
+        r"data/images/test/M-33-7-A-d-2-3_30.jpg",
+        r"data/images/test/M-33-7-A-d-2-3_40.jpg",
+    ]
+    LABEL_TEST_LIST: List[str] = [
+        r"data/labels/test/M-33-7-A-d-2-3_19.png",
+        r"data/labels/test/M-33-7-A-d-2-3_27.png",
+        r"data/labels/test/M-33-7-A-d-2-3_29.png",
+        r"data/labels/test/M-33-7-A-d-2-3_30.png",
+        r"data/labels/test/M-33-7-A-d-2-3_40.png",
+    ]
 
-    PLOT_PATH : str = r"documents/plot/"
+    PLOT_PATH: str = r"documents/plot/"
+
 
 class CSVKeys:
     """Keys for CSV mapping files."""
+
     IMAGE_PATH: str = "img_path"
     LABEL_PATH: str = "label_path"
     FEATURE_PATH: str = "feature_path"
@@ -104,9 +121,10 @@ class CSVKeys:
 # CLASS DEFINITIONS
 # ============================================================================
 
+
 class ClassInfo:
     """Semantic class defi  nitions and metadata."""
-    
+
     # Mapping from class ID to class name /!\
     CLASS_NAMES: Dict[int, str] = {
         0: "Field",
@@ -116,25 +134,24 @@ class ClassInfo:
         4: "Road",
     }
     NUM_CLASSES: int = len(CLASS_NAMES)
-    
+
     # Mapping from class ID to RGB color for visualization
     CLASS_COLORS: Dict[int, list] = {
-        0: [0, 0, 0],        # Black
-        1: [255, 0, 0],      # Red
-        2: [0, 255, 0],      # Green
-        3: [0, 0, 255],      # Blue
+        0: [0, 0, 0],  # Black
+        1: [255, 0, 0],  # Red
+        2: [0, 255, 0],  # Green
+        3: [0, 0, 255],  # Blue
         4: [128, 128, 128],  # Gray
     }
-    
+
     # Priority weights for detection (higher = more important to detect)
     CLASS_PRIORITY: Dict[int, str] = {
-        0: "medium",   # Field
-        1: "high",     # Building - critical to detect
-        2: "medium",   # Woodland
-        3: "medium",   # Water
-        4: "high",     # Road - critical to detect
+        0: "medium",  # Field
+        1: "high",  # Building - critical to detect
+        2: "medium",  # Woodland
+        3: "medium",  # Water
+        4: "high",  # Road - critical to detect
     }
-
 
 
 class FeatureInfo:
@@ -147,39 +164,39 @@ class FeatureInfo:
     """
 
     # Color (RGB)
-    RED: int = 0          # Direct from downsampled RGB
-    GREEN: int = 1        # Direct from downsampled RGB
-    BLUE: int = 2         # Direct from downsampled RGB
+    RED: int = 0  # Direct from downsampled RGB
+    GREEN: int = 1  # Direct from downsampled RGB
+    BLUE: int = 2  # Direct from downsampled RGB
 
     # Color (HSV)
-    HUE: int = 3          # From cached HSV
+    HUE: int = 3  # From cached HSV
     SATURATION: int = 4  # From cached HSV
-    VALUE: int = 5       # From cached HSV
+    VALUE: int = 5  # From cached HSV
 
     # Intensity
-    GRAYSCALE: int = 6   # From cached grayscale
+    GRAYSCALE: int = 6  # From cached grayscale
 
     # Multi-scale Gaussian blur
-    BLUR_SIGMA_1: int = 7    # Gaussian blur σ=1.0
+    BLUR_SIGMA_1: int = 7  # Gaussian blur σ=1.0
     BLUR_SIGMA_2_5: int = 8  # Gaussian blur σ=2.5
-    BLUR_SIGMA_5: int = 9    # Gaussian blur σ=5.0
+    BLUR_SIGMA_5: int = 9  # Gaussian blur σ=5.0
 
     # Gradient
-    GRADIENT_MAG: int = 10       # From cached gradients
-    GRADIENT_ORIENT: int = 11    # Orientation from cached gradients
+    GRADIENT_MAG: int = 10  # From cached gradients
+    GRADIENT_ORIENT: int = 11  # Orientation from cached gradients
 
     # Texture
-    LOCAL_VARIANCE: int = 12     # Vectorized with box filters
-    LOCAL_ENTROPY: int = 13      # Numba-accelerated
-    LBP: int = 14                # Local Binary Pattern (skimage)
+    LOCAL_VARIANCE: int = 12  # Vectorized with box filters
+    LOCAL_ENTROPY: int = 13  # Numba-accelerated
+    LBP: int = 14  # Local Binary Pattern (skimage)
 
     # Spectral indices
-    NDVI: int = 15               # Vectorized
-    WATER_INDEX: int = 16        # Vectorized
+    NDVI: int = 15  # Vectorized
+    WATER_INDEX: int = 16  # Vectorized
 
     # Geometric features
-    ANISOTROPY: int = 17         # Vectorized with box filters
-    CORNER_DENSITY: int = 18     # Vectorized with box filters
+    ANISOTROPY: int = 17  # Vectorized with box filters
+    CORNER_DENSITY: int = 18  # Vectorized with box filters
 
     # Total number of features
     NUM_FEATURES: int = 19
@@ -210,79 +227,90 @@ class FeatureInfo:
     }
 
     FEATURE_UNET_SELECTION: List[int] = [
-        RED, GREEN, BLUE,     # Color
-        NDVI,                 # Vegetation indicator
-        CORNER_DENSITY,       # Geometric structures (Building/Road)
-        GRADIENT_MAG,         # Edges / contours
-        LOCAL_ENTROPY,        # Texture
-        ANISOTROPY            # Linear structures, orientation
+        RED,
+        GREEN,
+        BLUE,  # Color
+        NDVI,  # Vegetation indicator
+        CORNER_DENSITY,  # Geometric structures (Building/Road)
+        GRADIENT_MAG,  # Edges / contours
+        LOCAL_ENTROPY,  # Texture
+        ANISOTROPY,  # Linear structures, orientation
     ]
 
     # Subset of features for K-Means (larger, multi-dimensional)
     FEATURE_KMEANS_SELECTION: List[int] = [
-        RED, GREEN, BLUE,     # Color
-        HUE, SATURATION, VALUE,  # HSV channels for better color separation
-        GRAYSCALE,            # Intensity
-        BLUR_SIGMA_1, BLUR_SIGMA_2_5, BLUR_SIGMA_5,  # Multi-scale smoothing
-        GRADIENT_MAG, GRADIENT_ORIENT,               # Edges
-        LOCAL_VARIANCE, LOCAL_ENTROPY, LBP,          # Texture features
-        NDVI, WATER_INDEX,                            # Spectral indices
-        ANISOTROPY, CORNER_DENSITY                   # Geometric features
+        RED,
+        GREEN,
+        BLUE,  # Color
+        HUE,
+        SATURATION,
+        VALUE,  # HSV channels for better color separation
+        GRAYSCALE,  # Intensity
+        BLUR_SIGMA_1,
+        BLUR_SIGMA_2_5,
+        BLUR_SIGMA_5,  # Multi-scale smoothing
+        GRADIENT_MAG,
+        GRADIENT_ORIENT,  # Edges
+        LOCAL_VARIANCE,
+        LOCAL_ENTROPY,
+        LBP,  # Texture features
+        NDVI,
+        WATER_INDEX,  # Spectral indices
+        ANISOTROPY,
+        CORNER_DENSITY,  # Geometric features
     ]
 
-    FEATURE_RBG_ONLY : List[int] = [
-        RED, GREEN, BLUE
-    ]
+    FEATURE_RBG_ONLY: List[int] = [RED, GREEN, BLUE]
 
-    FEATURE_ALL : List[int] = list(range(NUM_FEATURES))
-        
-    
+    FEATURE_ALL: List[int] = list(range(NUM_FEATURES))
+
 
 # ============================================================================
 # PROCESSING PARAMETERS
 # ============================================================================
 
+
 class ProcessingConfig:
     """Default parameters for image processing operations."""
 
-    #Background class (most common class in images)
+    # Background class (most common class in images)
     BACKGROUND_CLASS: int = 0  # Field
-    
+
     # Gaussian smoothing
     GAUSSIAN_SIGMA_LIGHT: float = 1.0
     GAUSSIAN_SIGMA_MEDIUM: float = 1.5
     GAUSSIAN_SIGMA_HEAVY: float = 2.0
-    
+
     # CLAHE parameters
     CLAHE_CLIP_LIMIT_LOW: float = 2.0
     CLAHE_CLIP_LIMIT_MEDIUM: float = 3.0
     CLAHE_CLIP_LIMIT_HIGH: float = 3.5
     CLAHE_TILE_SIZE: int = 8
-    
+
     # Edge detection
     CANNY_LOW_THRESHOLD: int = 30
     CANNY_HIGH_THRESHOLD: int = 100
     SOBEL_KERNEL_SIZE: int = 3
-    
+
     # Morphological operations
     MORPH_KERNEL_SIZE_SMALL: int = 3
     MORPH_KERNEL_SIZE_MEDIUM: int = 5
     MORPH_KERNEL_SIZE_LARGE: int = 7
-    
+
     # Local window sizes
     WINDOW_SIZE_SMALL: int = 5
     WINDOW_SIZE_MEDIUM: int = 7
     WINDOW_SIZE_LARGE: int = 9
     WINDOW_SIZE_XLARGE: int = 11
-    
+
     # Texture analysis
     LBP_RADIUS: int = 2
     LBP_POINTS_MULTIPLIER: int = 8
-    
+
     # Channel emphasis multipliers
     GREEN_EMPHASIS_FACTOR: float = 1.4
     BLUE_EMPHASIS_FACTOR: float = 1.5
-    
+
     # Variance scaling factors
     VARIANCE_SCALE_FIELD: float = 100.0
     VARIANCE_SCALE_WATER: float = 150.0
@@ -293,41 +321,40 @@ class ProcessingConfig:
     MIN_AREA: int = 50  # Minimum area to keep a detected region
     CONFIDENCE_THRESHOLD: float = 0.5  # Minimum confidence to accept detection
 
-    #PCA Subsample size
+    # PCA Subsample size
     PCA_SUBSAMPLE_SIZE: int = 200000
 
     # Downsampling faction for feature extraction
     DOWNSAMPLE_FRACTION: float = 0.5
 
-    #Data augmentation parameters
+    # Data augmentation parameters
     AUGMENTATION_RATIO: int = 3  # Number of augmented samples per original image
     CRITICAL_CLASS_IDS: List[int] = [1, 4]  # Building and Road
     ROTATION_ANGLES: List[int] = [90, 180, 270]  # Degrees
     ZOOM_RANGE: List[float] = [0.8, 1.2]  # Zoom in/out range
     BRIGHTNESS_RANGE: List[float] = [-0.1, 0.1]  # +/- brightness adjustment factor
     CONTRAST_RANGE: List[float] = [0.9, 1.1]  # +/- contrast adjustment factor
-    
+
+
 class ImgSelectionRule:
     """Rules for selecting images based on class proportions."""
 
     BUILDING_AND_ROAD = {
         "__logic__": "AND",
         1: ">=1",  # At least 1 building
-        4: ">=1"   # At least 1 road
-}
+        4: ">=1",  # At least 1 road
+    }
     BUILDING_OR_ROAD_OR_WATER = {
         "__logic__": "OR",
         1: ">=1",  # At least 1 building
         4: ">=1",  # At least 1 road
-        3: ">=1"   # At least 1 water
-}
-    NO_FIELD = {
-        "__logic__": "AND",
-        0: "0"     # No field pixels
-}
-    
+        3: ">=1",  # At least 1 water
+    }
+    NO_FIELD = {"__logic__": "AND", 0: "0"}  # No field pixels
+
 
 class HistogramConfig:
     """Configuration for histogram-based KDE."""
+
     NUM_BINS: int = 256  # Number of bins for histogram discretization
     SMOOTHING_SIGMA: float = 2.0  # Gaussian smoothing sigma for KDE approximation

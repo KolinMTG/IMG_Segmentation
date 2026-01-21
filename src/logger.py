@@ -1,7 +1,6 @@
-
 """Renvoie un logger configuré pour l'application."""
 
-# Auth : Colin Manyri 
+# Auth : Colin Manyri
 # Date : 27-06-2024
 
 
@@ -21,7 +20,9 @@ if not os.path.exists(GeneralPath.LOG_PATH):
     os.makedirs(GeneralPath.LOG_PATH)
 
 
-def get_logger(log_file_name: str, log_level=logging.INFO, console: bool = True) -> logging.Logger:
+def get_logger(
+    log_file_name: str, log_level=logging.INFO, console: bool = True
+) -> logging.Logger:
     """Configure and return a logger with file and optional console output.
 
     Args:
@@ -36,13 +37,21 @@ def get_logger(log_file_name: str, log_level=logging.INFO, console: bool = True)
     if not logger.handlers:
         log_file = os.path.join(GeneralPath.LOG_PATH, log_file_name)
 
-        file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
-        file_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', datefmt='%H:%M:%S'))
+        file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
+        file_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s | %(levelname)s | %(message)s", datefmt="%H:%M:%S"
+            )
+        )
         logger.addHandler(file_handler)
 
         if console:
             console_handler = logging.StreamHandler()
-            console_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', '%H:%M:%S'))
+            console_handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s | %(levelname)s | %(message)s", "%H:%M:%S"
+                )
+            )
             logger.addHandler(console_handler)
 
     return logger

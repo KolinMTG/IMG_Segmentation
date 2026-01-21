@@ -1,6 +1,5 @@
 """Useful functions to get information about the dataset. Or visualize images and labels."""
 
-
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -13,13 +12,13 @@ from src.cste import ClassInfo, FeatureInfo, DataPath
 from src.logger import get_logger
 import json
 
-
 log = get_logger("data_info.log")
+
 
 def show_img_labels(img_path: str, label_path: str):
     """
     Visualize image and segmentation mask.
-    
+
     Args:
         img_path: Path to the RGB image
         label_path: Path to the segmentation mask
@@ -29,7 +28,6 @@ def show_img_labels(img_path: str, label_path: str):
 
     # Load mask as single-channel
     label = Image.open(label_path).convert("L")
-    
 
     # Convert to numpy arrays
     img_array = np.array(img)
@@ -40,10 +38,12 @@ def show_img_labels(img_path: str, label_path: str):
 
     # Get colors and class names from constants
     colors = ClassInfo.CLASS_COLORS
-    class_names = ClassInfo.CLASS_NAMES 
+    class_names = ClassInfo.CLASS_NAMES
 
     # Build colored mask from segmentation labels
-    colored_mask = np.zeros((label_array.shape[0], label_array.shape[1], 3), dtype=np.uint8)
+    colored_mask = np.zeros(
+        (label_array.shape[0], label_array.shape[1], 3), dtype=np.uint8
+    )
 
     for class_id, color in colors.items():
         colored_mask[label_array == class_id] = color
@@ -84,7 +84,7 @@ def show_img_labels(img_path: str, label_path: str):
 def class_proportion(labels_path_folder: str) -> None:
     """
     Calculate and display the total proportion of each class across all label images.
-    
+
     Args:
         labels_path_folder: Path to the folder containing label images
     """
@@ -95,69 +95,89 @@ def class_proportion(labels_path_folder: str) -> None:
     # Get class names and colors from constants
     class_names = ClassInfo.CLASS_NAME
     colors = ClassInfo.CLASS_COLOR
-    
+
     # List all label image files in the folder
-    label_files = [f for f in os.listdir(labels_path_folder) 
-                   if f.endswith(('.png', '.jpg', '.jpeg'))]
-    
+    label_files = [
+        f
+        for f in os.listdir(labels_path_folder)
+        if f.endswith((".png", ".jpg", ".jpeg"))
+    ]
+
     log.info(f"Analyzing {len(label_files)} label images...")
-    
+
     # Process each label image
     for label_file in tqdm(label_files, desc="Processing label images"):
         label_path = os.path.join(labels_path_folder, label_file)
-        
+
         # Load mask as grayscale
         label = Image.open(label_path).convert("L")
         label_array = np.array(label)
-        
+
         # Count pixels for each class
         for class_id in class_counts.keys():
             class_counts[class_id] += np.sum(label_array == class_id)
-        
+
         total_pixels += label_array.size
-    
+
     # Calculate and display proportions
-    log.info("\n" + "="*60)
+    log.info("\n" + "=" * 60)
     log.info("CLASS PROPORTIONS ACROSS ENTIRE DATASET")
-    log.info("="*60 + "\n")
-    
+    log.info("=" * 60 + "\n")
+
     for class_id in sorted(class_counts.keys()):
         count = class_counts[class_id]
         percentage = (count / total_pixels) * 100 if total_pixels > 0 else 0
-        log.info(f"{class_names[class_id]:15} (class {class_id}): "
-                 f"{percentage:6.2f}% ({count:,} pixels)")
-    
+        log.info(
+            f"{class_names[class_id]:15} (class {class_id}): "
+            f"{percentage:6.2f}% ({count:,} pixels)"
+        )
+
     log.info(f"\n{'Total':15}: {total_pixels:,} pixels")
-    log.info("="*60)
-    
+    log.info("=" * 60)
+
     # Visualization with bar chart and pie chart
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
+
     # Prepare data for visualization
     classes = [class_names[i] for i in sorted(class_counts.keys())]
-    percentages = [(class_counts[i] / total_pixels) * 100 
-                   for i in sorted(class_counts.keys())]
+    percentages = [
+        (class_counts[i] / total_pixels) * 100 for i in sorted(class_counts.keys())
+    ]
     bar_colors = [np.array(colors[i]) / 255.0 for i in sorted(class_counts.keys())]
-    
+
     # Bar chart
-    bars = ax1.bar(classes, percentages, color=bar_colors, edgecolor='black', linewidth=1.5)
-    ax1.set_ylabel('Proportion (%)', fontsize=12)
-    ax1.set_title('Class Distribution', fontsize=14, fontweight='bold')
-    ax1.grid(axis='y', alpha=0.3)
-    
+    bars = ax1.bar(
+        classes, percentages, color=bar_colors, edgecolor="black", linewidth=1.5
+    )
+    ax1.set_ylabel("Proportion (%)", fontsize=12)
+    ax1.set_title("Class Distribution", fontsize=14, fontweight="bold")
+    ax1.grid(axis="y", alpha=0.3)
+
     # Add percentage values on top of bars
     for bar, pct in zip(bars, percentages):
         height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{pct:.1f}%', ha='center', va='bottom', fontsize=10)
-    
-    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
-    
+        ax1.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{pct:.1f}%",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
+
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha="right")
+
     # Pie chart
-    ax2.pie(percentages, labels=classes, colors=bar_colors, autopct='%1.1f%%',
-            startangle=90, textprops={'fontsize': 10})
-    ax2.set_title('Class Distribution', fontsize=14, fontweight='bold')
-    
+    ax2.pie(
+        percentages,
+        labels=classes,
+        colors=bar_colors,
+        autopct="%1.1f%%",
+        startangle=90,
+        textprops={"fontsize": 10},
+    )
+    ax2.set_title("Class Distribution", fontsize=14, fontweight="bold")
+
     plt.tight_layout()
     plt.show()
 
@@ -166,84 +186,103 @@ def class_proportion_by_image(labels_path_folder: str) -> None:
     """
     Calculate and display the proportion of images containing at least one pixel of each class.
     Focuses on class presence rather than pixel count.
-    
+
     Args:
         labels_path_folder: Path to the folder containing label images
     """
     # Dictionary to store the number of images containing each class
     class_presence = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
     total_images = 0
-    
+
     # Get class names and colors from constants
     class_names = ClassInfo.CLASS_NAME
     colors = ClassInfo.CLASS_COLOR
-    
+
     # List all label image files in the folder
-    label_files = [f for f in os.listdir(labels_path_folder) 
-                   if f.endswith(('.png', '.jpg', '.jpeg'))]
-    
+    label_files = [
+        f
+        for f in os.listdir(labels_path_folder)
+        if f.endswith((".png", ".jpg", ".jpeg"))
+    ]
+
     log.info(f"Analyzing presence of classes in {len(label_files)} images...")
-    
+
     # Process each label image
     for label_file in tqdm(label_files, desc="Processing label images"):
         label_path = os.path.join(labels_path_folder, label_file)
-        
+
         # Load mask as grayscale
         label = Image.open(label_path).convert("L")
         label_array = np.array(label)
-        
+
         # Check presence of each class (at least one pixel)
         for class_id in class_presence.keys():
             if np.any(label_array == class_id):
                 class_presence[class_id] += 1
-        
+
         total_images += 1
-    
+
     # Calculate and display proportions
-    log.info("\n" + "="*60)
+    log.info("\n" + "=" * 60)
     log.info("CLASS PRESENCE ACROSS IMAGES")
-    log.info("="*60 + "\n")
-    
+    log.info("=" * 60 + "\n")
+
     for class_id in sorted(class_presence.keys()):
         count = class_presence[class_id]
         percentage = (count / total_images) * 100 if total_images > 0 else 0
-        log.info(f"{class_names[class_id]:15} (class {class_id}): "
-                 f"{percentage:6.2f}% ({count}/{total_images} images)")
-    
+        log.info(
+            f"{class_names[class_id]:15} (class {class_id}): "
+            f"{percentage:6.2f}% ({count}/{total_images} images)"
+        )
+
     log.info(f"\n{'Total images':15}: {total_images}")
-    log.info("="*60)
-    
+    log.info("=" * 60)
+
     # Visualization with bar chart and pie chart
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
+
     # Prepare data for visualization
     classes = [class_names[i] for i in sorted(class_presence.keys())]
-    percentages = [(class_presence[i] / total_images) * 100 
-                   for i in sorted(class_presence.keys())]
+    percentages = [
+        (class_presence[i] / total_images) * 100 for i in sorted(class_presence.keys())
+    ]
     bar_colors = [np.array(colors[i]) / 255.0 for i in sorted(class_presence.keys())]
-    
+
     # Bar chart
-    bars = ax1.bar(classes, percentages, color=bar_colors, edgecolor='black', linewidth=1.5)
-    ax1.set_ylabel('Presence in Images (%)', fontsize=12)
-    ax1.set_title('Class Presence Distribution', fontsize=14, fontweight='bold')
+    bars = ax1.bar(
+        classes, percentages, color=bar_colors, edgecolor="black", linewidth=1.5
+    )
+    ax1.set_ylabel("Presence in Images (%)", fontsize=12)
+    ax1.set_title("Class Presence Distribution", fontsize=14, fontweight="bold")
     ax1.set_ylim([0, 105])
-    ax1.grid(axis='y', alpha=0.3)
-    
+    ax1.grid(axis="y", alpha=0.3)
+
     # Add percentage values and counts on top of bars
     for i, (bar, pct) in enumerate(zip(bars, percentages)):
         height = bar.get_height()
         count = class_presence[sorted(class_presence.keys())[i]]
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{pct:.1f}%\n({count}/{total_images})', 
-                ha='center', va='bottom', fontsize=9)
-    
-    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
-    
+        ax1.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{pct:.1f}%\n({count}/{total_images})",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha="right")
+
     # Pie chart
-    ax2.pie(percentages, labels=classes, colors=bar_colors, autopct='%1.1f%%',
-            startangle=90, textprops={'fontsize': 10})
-    ax2.set_title('Class Presence Distribution', fontsize=14, fontweight='bold')
-    
+    ax2.pie(
+        percentages,
+        labels=classes,
+        colors=bar_colors,
+        autopct="%1.1f%%",
+        startangle=90,
+        textprops={"fontsize": 10},
+    )
+    ax2.set_title("Class Presence Distribution", fontsize=14, fontweight="bold")
+
     plt.tight_layout()
     plt.show()
 
@@ -294,12 +333,7 @@ def show_feature(feature_path: str, feature_id: List[int]) -> None:
 
     if selected_norm.shape[2] == 1:
         # Single feature: heatmap
-        sns.heatmap(
-            selected_norm[:, :, 0],
-            cmap="viridis",
-            cbar=True,
-            square=True
-        )
+        sns.heatmap(selected_norm[:, :, 0], cmap="viridis", cbar=True, square=True)
         plt.title(f"Feature {FeatureInfo.FEATURE_NAMES[feature_id[0]]} Heatmap")
 
     else:
@@ -320,35 +354,48 @@ def show_feature(feature_path: str, feature_id: List[int]) -> None:
     plt.show()
 
 
-def show_all_features(feature_path: str, feature_info_cls = FeatureInfo) -> None:
+def show_all_features(feature_path: str, feature_info_cls=FeatureInfo) -> None:
     """
     Display a series of relevant visualizations for all feature types
     from a single .npy feature file (H, W, n_features).
-    
+
     Args:
         feature_path: Path to the .npy feature file
         feature_info_cls: Class containing feature indices as attributes
     """
     feats = np.load(feature_path)
-    
+
     # Dynamically generate groups using FeatureInfo class attributes
     groups = {
         "RGB": [feature_info_cls.RED, feature_info_cls.GREEN, feature_info_cls.BLUE],
-        "HSV": [feature_info_cls.HUE, feature_info_cls.SATURATION, feature_info_cls.VALUE],
-        "Grayscale & Blurs": [feature_info_cls.GRAYSCALE, feature_info_cls.BLUR_SIGMA_1, feature_info_cls.BLUR_SIGMA_5],
+        "HSV": [
+            feature_info_cls.HUE,
+            feature_info_cls.SATURATION,
+            feature_info_cls.VALUE,
+        ],
+        "Grayscale & Blurs": [
+            feature_info_cls.GRAYSCALE,
+            feature_info_cls.BLUR_SIGMA_1,
+            feature_info_cls.BLUR_SIGMA_5,
+        ],
         "Gradient": [feature_info_cls.GRADIENT_MAG, feature_info_cls.GRADIENT_ORIENT],
-        "Texture": [feature_info_cls.LOCAL_VARIANCE, feature_info_cls.LOCAL_ENTROPY, feature_info_cls.LBP],
+        "Texture": [
+            feature_info_cls.LOCAL_VARIANCE,
+            feature_info_cls.LOCAL_ENTROPY,
+            feature_info_cls.LBP,
+        ],
         "Spectral": [feature_info_cls.NDVI, feature_info_cls.WATER_INDEX],
-        "Geometry": [feature_info_cls.ANISOTROPY, feature_info_cls.CORNER_DENSITY]
+        "Geometry": [feature_info_cls.ANISOTROPY, feature_info_cls.CORNER_DENSITY],
     }
-    
+
     for group_name, feature_ids in groups.items():
         log.info(f"Displaying features for group: {group_name}")
         show_feature(feature_path, feature_ids)
 
 
-
-def csv_class_statistic_info(stat_csv_path:str= DataPath.CSV_CLASS_STATISTICS_TRAIN, save: str = None):
+def csv_class_statistic_info(
+    stat_csv_path: str = DataPath.CSV_CLASS_STATISTICS_TRAIN, save: str = None
+):
     """
     Plot statistics from a CSV containing class proportions and counts per image.
 
@@ -365,7 +412,9 @@ def csv_class_statistic_info(stat_csv_path:str= DataPath.CSV_CLASS_STATISTICS_TR
     # ---------- 1. Distribution of proportions ----------
     plt.figure(figsize=(10, 6))
     for c in range(num_classes):
-        sns.kdeplot(df[f"prop_class_{c}"], label=f"Class {ClassInfo.CLASS_NAMES[c]}", fill=True)
+        sns.kdeplot(
+            df[f"prop_class_{c}"], label=f"Class {ClassInfo.CLASS_NAMES[c]}", fill=True
+        )
     plt.title("Distribution of class proportions per image")
     plt.xlabel("Proportion")
     plt.ylabel("Density")
@@ -381,7 +430,9 @@ def csv_class_statistic_info(stat_csv_path:str= DataPath.CSV_CLASS_STATISTICS_TR
     # ---------- 2. Number of images containing each class ----------
     presence = [(df[f"count_class_{c}"] > 0).sum() for c in range(num_classes)]
     plt.figure(figsize=(8, 5))
-    sns.barplot(x=[f"Class {ClassInfo.CLASS_NAMES[c]}" for c in range(num_classes)], y=presence)
+    sns.barplot(
+        x=[f"Class {ClassInfo.CLASS_NAMES[c]}" for c in range(num_classes)], y=presence
+    )
     plt.title("Number of images containing each class")
     plt.ylabel("Number of images")
     plt.xlabel("Class")
@@ -395,7 +446,13 @@ def csv_class_statistic_info(stat_csv_path:str= DataPath.CSV_CLASS_STATISTICS_TR
     # ---------- 3. Histogram of absolute pixel counts ----------
     plt.figure(figsize=(12, 6))
     for c in range(num_classes):
-        sns.histplot(df[f"count_class_{c}"], bins=50, label=f"Class {ClassInfo.CLASS_NAMES[c]}", kde=False, alpha=0.5)
+        sns.histplot(
+            df[f"count_class_{c}"],
+            bins=50,
+            label=f"Class {ClassInfo.CLASS_NAMES[c]}",
+            kde=False,
+            alpha=0.5,
+        )
     plt.title("Histogram of absolute pixel counts per class")
     plt.xlabel("Pixel count")
     plt.ylabel("Number of images")
@@ -407,11 +464,9 @@ def csv_class_statistic_info(stat_csv_path:str= DataPath.CSV_CLASS_STATISTICS_TR
     else:
         plt.show()
 
+
 def show_img_gt_vs_pred(
-    img_path: str,
-    gt_label_path: str,
-    pred_label_path: str,
-    alpha: float = 0.5
+    img_path: str, gt_label_path: str, pred_label_path: str, alpha: float = 0.5
 ):
     """
     Visualize image with ground truth and predicted segmentation masks,
@@ -459,7 +514,7 @@ def show_img_gt_vs_pred(
     correct = gt_label == pred_label
     incorrect = gt_label != pred_label
 
-    comparison[correct] = [0, 255, 0]    # Green = correct
+    comparison[correct] = [0, 255, 0]  # Green = correct
     comparison[incorrect] = [255, 0, 0]  # Red = error
 
     # Plot
@@ -492,12 +547,13 @@ def show_img_gt_vs_pred(
     plt.tight_layout()
     plt.show()
 
+
 def generate_prediction_visualizations(
     img_dir: str,
     gt_mask_dir: str,
     pred_mask_dir: str,
     output_dir: str,
-    alpha: float = 0.5
+    alpha: float = 0.5,
 ) -> None:
     """
     Generate and save visual comparisons between images, ground truth masks,
@@ -594,9 +650,6 @@ def generate_prediction_visualizations(
     print("Visualization generation completed.")
 
 
-
-
-
 def save_precision_recall_grouped_plot(json_path: str, output_dir: str):
     """
     Load metrics from a JSON file and save a grouped bar plot
@@ -643,10 +696,20 @@ def save_precision_recall_grouped_plot(json_path: str, output_dir: str):
 
     # Annotate bars
     for i in range(len(class_names)):
-        plt.text(x[i] - width / 2, precision_vals[i] + 0.02,
-                 f"{precision_vals[i]:.2f}", ha="center", va="bottom")
-        plt.text(x[i] + width / 2, recall_vals[i] + 0.02,
-                 f"{recall_vals[i]:.2f}", ha="center", va="bottom")
+        plt.text(
+            x[i] - width / 2,
+            precision_vals[i] + 0.02,
+            f"{precision_vals[i]:.2f}",
+            ha="center",
+            va="bottom",
+        )
+        plt.text(
+            x[i] + width / 2,
+            recall_vals[i] + 0.02,
+            f"{recall_vals[i]:.2f}",
+            ha="center",
+            va="bottom",
+        )
 
     # Save figure
     output_path = os.path.join(output_dir, "precision_recall_per_class.png")
@@ -657,13 +720,12 @@ def save_precision_recall_grouped_plot(json_path: str, output_dir: str):
     print(f"Grouped precision/recall plot saved at: {output_path}")
 
 
-
 if __name__ == "__main__":
     # Example usage: display a single image with its label
     # img_path = os.path.join(DataPath.IMG_TRAIN, 'M-34-51-C-d-4-1_191.jpg')
     # label_path = os.path.join(DataPath.LABEL_TRAIN, 'M-34-51-C-d-4-1_191_m.png')
     # show_img_labels(img_path, label_path)
-    
+
     # Analyze class proportions across the entire training dataset
     log.info("\n")
     # class_proportion(DataPath.LABEL_TRAIN)
@@ -684,13 +746,13 @@ if __name__ == "__main__":
     #     pred_mask_dir = DataPath.HISTOGRAM_DIR,
     #     output_dir = DataPath.HISTOGRAM_VISUALISATION,
     #     alpha = 0.5)
-    
+
     # Example: save precision/recall grouped plot
     save_precision_recall_grouped_plot(
         json_path=r"data/results/evaluation_report/unet_inference/evaluation_report.json",
-        output_dir=r"data/results/evaluation_report/unet_inference"
+        output_dir=r"data/results/evaluation_report/unet_inference",
     )
     save_precision_recall_grouped_plot(
         json_path=r"data/results/evaluation_report/unet_posttreatment/evaluation_report.json",
-        output_dir=r"data/results/evaluation_report/unet_posttreatment"
+        output_dir=r"data/results/evaluation_report/unet_posttreatment",
     )

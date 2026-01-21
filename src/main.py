@@ -16,7 +16,6 @@ from typing import Dict
 import matplotlib.pyplot as plt
 
 
-
 from cste import ClassInfo, DataPath, ImgSelectionRule, GeneralConfig, ProcessingConfig
 
 from src.logger import get_logger
@@ -27,8 +26,6 @@ from feature_mask_extraction import extract_features_with_augmentation
 from inference import run_unet_inference
 from histogram_evaluation import run_histogram_inference
 from training_examples import *
-
-
 
 log = get_logger("main_examples")
 
@@ -60,7 +57,7 @@ if __name__ == "__main__":
     #     output_csv=DataPath.CSV_CLASS_STATISTICS_TRAIN,
     #     num_classes=ClassInfo.NUM_CLASSES
     # )
-    #return a CSV with class proportions and counts for each image (header : img_id,img_path,label_path,prop_class_0,...,prop_class_N,count_class_0,...,count_class_N)
+    # return a CSV with class proportions and counts for each image (header : img_id,img_path,label_path,prop_class_0,...,prop_class_N,count_class_0,...,count_class_N)
 
     # select_img(
     #     mapping_csv=DataPath.CSV_MAPPING_TRAIN,
@@ -91,11 +88,9 @@ if __name__ == "__main__":
     #         clear_folders=True
     #     )
 
-
     #! 4 Train differents models (KMeans, RandomForest, GradientBoosting, UNet)
     # See training_examples.py for detailed examples of training each model type
     # train_unet()
-
 
     # train_kmeans()
     # evaluate_kmeans()
@@ -119,8 +114,5 @@ if __name__ == "__main__":
         save_scores=False,
         batch_log_interval=20,
         output_size=(512, 512),
-        postreatment=True
+        postreatment=True,
     )
-
-    
-

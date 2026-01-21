@@ -14,34 +14,37 @@ from src.cste import DataPath
 
 log = get_logger("io_utils")
 
-def load_image(img_path: str, normalize: bool = True, one_channel: bool = False) -> np.ndarray:
+
+def load_image(
+    img_path: str, normalize: bool = True, one_channel: bool = False
+) -> np.ndarray:
     """
     Load RGB image from file path.
-    
+
     Args:
         img_path: Path to image file
         normalize: If True, normalize to [0, 1], else keep [0, 255]
         one_channel: If True, load as grayscale mono channel
-        
+
     Returns:
         RGB image as numpy array
         - If normalize=True: shape (H, W, 3), dtype float32, range [0, 1]
         - If normalize=False: shape (H, W, 3), dtype uint8, range [0, 255]
-        
+
     Raises:
         FileNotFoundError: If image path does not exist
         ValueError: If image cannot be loaded or converted to RGB
     """
     if not os.path.exists(img_path):
         raise FileNotFoundError(f"Image not found: {img_path}")
-    
+
     try:
         img = Image.open(img_path).convert("RGB")
-        if one_channel: # convert to grayscale if requested
+        if one_channel:  # convert to grayscale if requested
             img = img.convert("L")
     except Exception as e:
         raise ValueError(f"Failed to load image {img_path}: {e}")
-    
+
     img_array = np.array(img)
 
     if normalize:
@@ -51,11 +54,7 @@ def load_image(img_path: str, normalize: bool = True, one_channel: bool = False)
     return img_array
 
 
-def save_mask(
-    mask: np.ndarray,
-    save_path: str,
-    as_uint8: bool = True
-) -> None:
+def save_mask(mask: np.ndarray, save_path: str, as_uint8: bool = True) -> None:
     """
     Save a single-channel integer mask to disk as PNG.
 
@@ -83,25 +82,25 @@ def save_mask(
     img.save(save_path)
 
 
-
 def list_dir_endwith(
-    dir_path: str,
-    suffixes: Optional[tuple] = ('.png', '.jpg', '.jpeg')
+    dir_path: str, suffixes: Optional[tuple] = (".png", ".jpg", ".jpeg")
 ) -> List[str]:
     """
     List files in directory with specific suffixes.
     Args:
         dir_path: Directory path
         suffixes: Tuple of file extensions to filter by
-        
+
     Returns:
         List of file paths matching the suffixes (initial given directory + filename)
     """
     if not os.path.isdir(dir_path):
         raise NotADirectoryError(f"Not a directory: {dir_path}")
-    
+
     list_files_names = os.listdir(dir_path)
-    list_selected_files = [f for f in list_files_names if "."+f.split('.')[-1].lower() in suffixes]
+    list_selected_files = [
+        f for f in list_files_names if "." + f.split(".")[-1].lower() in suffixes
+    ]
     return [os.path.join(dir_path, f) for f in list_selected_files]
 
 
@@ -113,10 +112,9 @@ def get_filename_noext(path: str) -> str:
     name, _ = os.path.splitext(filename)
     return name
 
+
 def build_mapping_csv(
-    img_dir: str,
-    label_dir: str,
-    output_csv_path: str = DataPath.CSV_MAPPING_TRAIN
+    img_dir: str, label_dir: str, output_csv_path: str = DataPath.CSV_MAPPING_TRAIN
 ) -> None:
     """
     Build a coherent CSV mapping for training data.
@@ -126,7 +124,6 @@ def build_mapping_csv(
     processed = 0
     skipped = 0
     rows: List[List[str]] = []
-
 
     for img_path in img_paths:
         img_id = get_filename_noext(img_path)
@@ -159,11 +156,12 @@ def clear_folder_if_exists(folder_path: str) -> None:
                     os.unlink(file_path)
                 elif os.path.isdir(file_path):
                     import shutil
+
                     shutil.rmtree(file_path)
             except Exception as e:
-                log.error(f'Failed to delete {file_path}. Reason: {e}')
+                log.error(f"Failed to delete {file_path}. Reason: {e}")
+
 
 if __name__ == "__main__":
     load_image("data/images/train/M-33-7-A-d-2-3_0.jpg", normalize=True)
     print("Shape:", load_image("data/images/train/M-33-7-A-d-2-3_0.jpg").shape)
-                
