@@ -1,16 +1,13 @@
-Voici une **version complète, reformulée et propre** de ton README, prête à copier et utiliser. J’ai reformulé certaines phrases pour plus de clarté, corrigé l’orthographe et ajouté des sections manquantes.
-
----
 
 # IMG_SEGMENTATION – Satellite Image Segmentation Project
 
-**Date:** 2026-01-21
-**Status:** In Progress
-**Author:** Colin MANYRI
-**License:** MIT – Copyright (c) 2026 Colin MANYRI
-**Version:** 10.0.26
+- **Date:** 2026-01-21
+- **Status:** In Progress
+- **Author:** Colin MANYRI
+- **License:** MIT – Copyright (c) 2026 Colin MANYRI
+- **Version:** 10.0.26
 
----
+
 
 ## Project Goal
 
@@ -25,7 +22,7 @@ This project implements several **complete pipelines for satellite image segment
 
 The pipelines are designed to be **modular and flexible**, allowing experimentation with different features, models, and evaluation strategies.
 
----
+
 
 ## Dataset
 
@@ -44,7 +41,6 @@ The pipelines are designed to be **modular and flexible**, allowing experimentat
 
 * `raw_data/` – allows recreating Train/Validation/Test splits using the provided `split.py` script
 
----
 
 ## Main Features
 
@@ -55,7 +51,6 @@ This project extracts multiple types of features from images for segmentation, g
 * **Gradient and structural:** Gradient magnitude & orientation, anisotropy, corner density
 * **Texture:** Local variance, local entropy, LBP
 
----
 
 ## Repository Structure
 
@@ -73,7 +68,6 @@ This project extracts multiple types of features from images for segmentation, g
 * [plot/](documents/plot/) – Plots for data analysis and evaluation
 * [evaluation_strategy](documents/evaluation_strategy.md) – Explanation of evaluation methods
 
----
 
 ## Installation
 
@@ -95,7 +89,6 @@ conda activate IMG_SEG
 pip install -r requirements.txt
 ```
 
----
 
 ## Hardware Requirements
 
@@ -108,7 +101,6 @@ pip install -r requirements.txt
 * **CPU + downsampling, 50 epochs:** ~6–8 hours
 * **GPU (50 epochs):** depends on GPU, typically 20–40 minutes
 
----
 
 ## Data Setup
 
@@ -124,15 +116,22 @@ data/
 Use the provided `split.py` script to create Train/Validation/Test splits from the raw data.
 > If you encounter issues with paths, check the `DataPath` class in `src/cste.py`.
 
----
 
 ## External Elements / Citations
 
-* Landcover AI dataset - *License: Creative Commons*
+* Landcover AI dataset - *License: Creative Commons : CC BY-NC-SA 4.0*
     - **Kaggle:** [https://www.kaggle.com/datasets/aletbm/land-cover-from-aerial-imagery-landcover-ai](https://www.kaggle.com/datasets/aletbm/land-cover-from-aerial-imagery-landcover-ai)
     - **Official website:** [https://landcover.ai.linuxpolska.com/](https://landcover.ai.linuxpolska.com/)
+* Autors of the dataset
+    - Boguszewski Adrian
+    - Batorski Dominik
+    - Ziemba-Jankowska Natalia
+    - Dziedzic Tomasz
+    - Zambrzycka Anna
+* Kaggle uploader pseudo
+    - AleTBM
 
----
+
 
 ## Contact / Support
 
