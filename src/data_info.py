@@ -720,6 +720,132 @@ def save_precision_recall_grouped_plot(json_path: str, output_dir: str):
     print(f"Grouped precision/recall plot saved at: {output_path}")
 
 
+
+def unet_json_eval_to_plt(input_json_path: str, output_folder: str) -> None:
+    """
+    Generate and save training metrics plots from a JSON file containing model training history.
+    
+    Args:
+        input_json_path: Path to the input JSON file containing training metrics
+        output_folder: Path to the folder where plots will be saved
+        
+    Raises:
+        FileNotFoundError: If input JSON file does not exist
+        json.JSONDecodeError: If JSON file is not valid
+        KeyError: If required keys are missing from the JSON data
+    """
+    # Check if input file exists
+    if not os.path.exists(input_json_path):
+        raise FileNotFoundError(f"Input JSON file not found: {input_json_path}")
+    
+    # Create output folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
+    
+    # Load JSON data
+    try:
+        with open(input_json_path, 'r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(f"Invalid JSON file: {e.msg}", e.doc, e.pos)
+    
+    # Verify required keys exist
+    required_keys = ['accuracy', 'loss', 'val_accuracy', 'val_loss', 'learning_rate']
+    missing_keys = [key for key in required_keys if key not in data]
+    if missing_keys:
+        raise KeyError(f"Missing required keys in JSON: {missing_keys}")
+    
+    # Set seaborn style
+    sns.set_style("whitegrid")
+    
+    # Extract data
+    epochs = range(1, len(data['accuracy']) + 1)
+    
+    # Plot 1: Accuracy (Training and Validation)
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, data['accuracy'], label='Training Accuracy', linewidth=2)
+    plt.plot(epochs, data['val_accuracy'], label='Validation Accuracy', linewidth=2)
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel('Accuracy', fontsize=12)
+    plt.title('Model Accuracy over Epochs', fontsize=14, fontweight='bold')
+    plt.legend(fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_folder, 'accuracy.png'), dpi=300)
+    plt.close()
+    
+    # Plot 2: Loss (Training and Validation)
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, data['loss'], label='Training Loss', linewidth=2)
+    plt.plot(epochs, data['val_loss'], label='Validation Loss', linewidth=2)
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel('Loss', fontsize=12)
+    plt.title('Model Loss over Epochs', fontsize=14, fontweight='bold')
+    plt.legend(fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_folder, 'loss.png'), dpi=300)
+    plt.close()
+    
+    # Plot 3: Learning Rate Schedule
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, data['learning_rate'], linewidth=2, color='green')
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel('Learning Rate', fontsize=12)
+    plt.title('Learning Rate Schedule', fontsize=14, fontweight='bold')
+    plt.yscale('log')  # Log scale for better visualization
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_folder, 'learning_rate.png'), dpi=300)
+    plt.close()
+    
+    # Plot 4: Combined Overview (2x2 subplots)
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    
+    # Accuracy subplot
+    axes[0, 0].plot(epochs, data['accuracy'], label='Train', linewidth=2)
+    axes[0, 0].plot(epochs, data['val_accuracy'], label='Val', linewidth=2)
+    axes[0, 0].set_xlabel('Epoch')
+    axes[0, 0].set_ylabel('Accuracy')
+    axes[0, 0].set_title('Accuracy')
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3)
+    
+    # Loss subplot
+    axes[0, 1].plot(epochs, data['loss'], label='Train', linewidth=2)
+    axes[0, 1].plot(epochs, data['val_loss'], label='Val', linewidth=2)
+    axes[0, 1].set_xlabel('Epoch')
+    axes[0, 1].set_ylabel('Loss')
+    axes[0, 1].set_title('Loss')
+    axes[0, 1].legend()
+    axes[0, 1].grid(True, alpha=0.3)
+    
+    # Learning Rate subplot
+    axes[1, 0].plot(epochs, data['learning_rate'], linewidth=2, color='green')
+    axes[1, 0].set_xlabel('Epoch')
+    axes[1, 0].set_ylabel('Learning Rate')
+    axes[1, 0].set_title('Learning Rate Schedule')
+    axes[1, 0].set_yscale('log')
+    axes[1, 0].grid(True, alpha=0.3)
+    
+    # Overfitting indicator (Val Loss - Train Loss)
+    overfitting_gap = [v - t for v, t in zip(data['val_loss'], data['loss'])]
+    axes[1, 1].plot(epochs, overfitting_gap, linewidth=2, color='red')
+    axes[1, 1].axhline(y=0, color='black', linestyle='--', linewidth=1)
+    axes[1, 1].set_xlabel('Epoch')
+    axes[1, 1].set_ylabel('Val Loss - Train Loss')
+    axes[1, 1].set_title('Overfitting Indicator')
+    axes[1, 1].grid(True, alpha=0.3)
+    
+    plt.suptitle('Training Overview', fontsize=16, fontweight='bold', y=1.00)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_folder, 'training_overview.png'), dpi=300)
+    plt.close()
+    
+    print(f"All plots successfully saved to: {output_folder}")
+
+
+
+
 if __name__ == "__main__":
     # Example usage: display a single image with its label
     # img_path = os.path.join(DataPath.IMG_TRAIN, 'M-34-51-C-d-4-1_191.jpg')
@@ -748,11 +874,16 @@ if __name__ == "__main__":
     #     alpha = 0.5)
 
     # Example: save precision/recall grouped plot
-    save_precision_recall_grouped_plot(
-        json_path=r"data/results/evaluation_report/unet_inference/evaluation_report.json",
-        output_dir=r"data/results/evaluation_report/unet_inference",
-    )
-    save_precision_recall_grouped_plot(
-        json_path=r"data/results/evaluation_report/unet_posttreatment/evaluation_report.json",
-        output_dir=r"data/results/evaluation_report/unet_posttreatment",
+    # save_precision_recall_grouped_plot(
+    #     json_path=r"data/results/evaluation_report/unet_inference/evaluation_report.json",
+    #     output_dir=r"data/results/evaluation_report/unet_inference",
+    # )
+    # save_precision_recall_grouped_plot(
+    #     json_path=r"data/results/evaluation_report/unet_posttreatment/evaluation_report.json",
+    #     output_dir=r"data/results/evaluation_report/unet_posttreatment",
+    # )
+
+    unet_json_eval_to_plt(
+        input_json_path=r"data/models/unet/training_history.json",
+        output_folder=r"documents/plot"
     )
